@@ -10,7 +10,6 @@
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<!-- Ajout du module d'authentification -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
 <style>
@@ -84,7 +83,7 @@
     transition: background 0.15s ease, border-color 0.15s ease;
   }
   .btn-back:hover { background: rgba(255, 255, 255, 0.08); border-color: var(--paper); }
-  
+
   .btn-auth {
     background: var(--ink-soft); border-color: transparent;
   }
@@ -129,7 +128,7 @@
   .filter-pill:hover { border-color: var(--ink); color: var(--ink); }
   .filter-pill.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 
-  /* Section de catégorie (style encadré) */
+  /* Section de catégorie */
   .category-section {
     border: 1px solid var(--line); border-radius: 20px; padding: 20px;
     margin-bottom: 24px; background: rgba(255, 255, 255, 0.25);
@@ -330,15 +329,15 @@
 
 <!-- MODALE AUTHENTIFICATION -->
 <dialog id="modalLogin">
-  <form id="formLogin">
+  <form id="formLogin" autocomplete="on">
     <h2>Mode Éditeur</h2>
     <div class="field">
       <label for="loginEmail">Adresse e-mail</label>
-      <input id="loginEmail" type="email" required placeholder="camille..." />
+      <input id="loginEmail" name="email" type="email" autocomplete="username" required value="camille.boissel@gmail.com" />
     </div>
     <div class="field">
       <label for="loginPass">Mot de passe</label>
-      <input id="loginPass" type="password" required />
+      <input id="loginPass" name="password" type="password" autocomplete="current-password" required />
     </div>
     <div class="modal-actions">
       <button type="button" class="btn-secondary" onclick="document.getElementById('modalLogin').close()">Annuler</button>
@@ -392,7 +391,7 @@
     <div class="field">
       <label>Photo du produit</label>
       <div class="image-upload-zone" id="dropZone">
-        🖼️ Colle une image (Ctrl+V), glisse-la ici, ou 
+        🖼️ Colle une image (Ctrl+V / Cmd+V), glisse-la ici, ou 
         <label class="upload-link">parcours tes fichiers<input type="file" id="fileInput" accept="image/*" style="display:none;"></label>
         <img id="imagePreview" />
       </div>
@@ -461,7 +460,7 @@
   </form>
 </dialog>
 
-<!-- MODALE CONFIRMATION (REMPLACE ALERT/CONFIRM) -->
+<!-- MODALE CONFIRMATION -->
 <dialog id="modalConfirm">
   <form method="dialog">
     <h2 style="font-size:18px;">Confirmation</h2>
@@ -476,7 +475,6 @@
 <div class="toast" id="toast"></div>
 
 <script>
-  // Configuration Firebase
   const firebaseConfig = {
     apiKey: "AIzaSyB6rvuMuhHfBFnmvOipW-3zPQ-rLXKdj3I",
     authDomain: "liste-cadeaux-ad6b5.firebaseapp.com",
@@ -500,11 +498,11 @@
   let selectedCategory = "ALL";
   let transferItemId = null;
 
-  // Gestion de l'authentification Éditeur
+  // Authentification Éditeur
   auth.onAuthStateChanged(user => {
-    isEditor = !!user; // Si un compte est connecté, on active le mode éditeur
+    isEditor = !!user;
     const btnLogin = document.getElementById('btnEditorLogin');
-    
+
     if (isEditor) {
       btnLogin.textContent = '🔓 Mode Éditeur';
       btnLogin.title = "Déconnexion";
@@ -512,11 +510,10 @@
       btnLogin.textContent = '🔒 Connexion';
       btnLogin.title = "Accès édition";
     }
-    
+
     document.getElementById('btnNewList').style.display = isEditor ? 'inline-block' : 'none';
     document.getElementById('btnNewItem').style.display = isEditor ? 'inline-block' : 'none';
-    
-    // Rafraîchir l'affichage pour montrer ou cacher les boutons d'édition
+
     if (currentList) renderItems(cachedItems);
     else renderLists(cachedLists);
   });
@@ -526,25 +523,25 @@
       auth.signOut();
       showToast("Mode invité activé");
     } else {
+      document.getElementById('loginEmail').value = "camille.boissel@gmail.com";
       document.getElementById('modalLogin').showModal();
     }
   };
 
   document.getElementById('formLogin').onsubmit = async (e) => {
     e.preventDefault();
-    const email = document.getElementById('loginEmail').value;
+    const email = document.getElementById('loginEmail').value.trim();
     const pass = document.getElementById('loginPass').value;
     try {
       await auth.signInWithEmailAndPassword(email, pass);
       document.getElementById('modalLogin').close();
-      showToast("Connexion réussie !");
-      document.getElementById('formLogin').reset();
+      showToast("Mode éditeur activé !");
+      document.getElementById('loginPass').value = "";
     } catch (err) {
-      alert("Erreur de connexion, vérifie tes accès.");
+      showToast("Mot de passe incorrect");
     }
   };
 
-  // Utilitaires robustes pour l'iframe de preview
   function showToast(msg) {
     const el = document.getElementById("toast");
     el.textContent = msg;
@@ -564,7 +561,7 @@
       if (location.protocol !== 'blob:' && location.protocol !== 'data:') {
         history.replaceState(null, "", url);
       }
-    } catch (e) { console.warn("replaceState bloqué (mode preview)"); }
+    } catch (e) {}
   }
 
   function customConfirm(msg) {
@@ -657,7 +654,7 @@
     try {
       await navigator.clipboard.writeText(location.href);
       showToast("Lien copié !");
-    } catch { showToast("Copie le lien en haut"); }
+    } catch { showToast("Copie le lien dans la barre d'adresse"); }
   };
 
   // Rendu Listes
@@ -677,6 +674,7 @@
 
     container.innerHTML = `<div class="grid">${lists.map(l => {
       const occasion = l.occasion || l.category || "Liste";
+      const desc = l.desc || l.description || "";
       return `
         <article class="card-list" data-id="${escapeHtml(l.id)}">
           ${isEditor ? `
@@ -689,7 +687,7 @@
             ${escapeHtml(occasion)}
           </div>
           <div class="name">${escapeHtml(l.name)}</div>
-          ${l.desc ? `<div class="desc">${escapeHtml(l.desc)}</div>` : ""}
+          ${desc ? `<div class="desc">${escapeHtml(desc)}</div>` : ""}
         </article>
       `;
     }).join("")}</div>`;
@@ -743,7 +741,7 @@
     return `
       <article class="card-item ${reserved ? "reserved" : ""}" data-id="${escapeHtml(it.id)}" data-url="${escapeHtml(url)}">
         <div class="photo">
-          ${photo ? `<img src="${escapeHtml(photo)}" loading="lazy">` : `<span>🎁</span>`}
+          ${photo ? `<img src="${escapeHtml(photo)}" loading="lazy" onerror="this.outerHTML='🎁'">` : `<span>🎁</span>`}
           ${!reserved && it.priority === "high" ? `<span class="badge-priority">⭐ Coup de cœur</span>` : ""}
           ${isEditor ? `
           <div class="photo-actions" onclick="event.stopPropagation()">
@@ -778,8 +776,13 @@
     renderCategoryFilters(items);
     const filtered = selectedCategory === "ALL" ? items : items.filter(it => getItemCategory(it).toLowerCase() === selectedCategory.toLowerCase());
     const container = document.getElementById("itemsContainer");
-    
+    const total = filtered.reduce((sum, it) => sum + (parseNumericPrice(it.price) || 0), 0);
+    const reservedCount = filtered.filter(isItemReserved).length;
+
     document.getElementById("itemsCount").textContent = `${filtered.length} idée${filtered.length > 1 ? "s" : ""}`;
+    document.getElementById("itemsSummary").textContent = filtered.length
+      ? `Total estimé : ${total.toFixed(2).replace(".", ",")} € • ${reservedCount} réservé${reservedCount > 1 ? "s" : ""}`
+      : (currentList?.desc || currentList?.description || "");
 
     if (!filtered.length) {
       container.innerHTML = `<div class="empty"><div class="empty-icon">🎀</div><div class="display">Aucun cadeau ici</div></div>`;
@@ -839,7 +842,7 @@
 
   // Modales Listes
   window.openListModal = (list = null) => {
-    if(!isEditor) return;
+    if (!isEditor) return;
     document.getElementById("modalListTitle").textContent = list ? "Modifier la liste" : "Nouvelle liste";
     document.getElementById("listId").value = list?.id || "";
     document.getElementById("listOccasion").value = list?.occasion || list?.category || "";
@@ -849,6 +852,7 @@
     document.getElementById("modalList").showModal();
   };
 
+  document.getElementById("btnNewList").onclick = () => openListModal();
   window.editList = (id) => { const l = cachedLists.find(x => x.id === id); if (l) openListModal(l); };
   window.deleteList = async (id) => {
     if (await customConfirm("Supprimer définitivement cette liste et tous ses cadeaux ?")) {
@@ -872,7 +876,7 @@
     showToast("Enregistré");
   };
 
-  // Gestion des images par Collage/Glisser-Déposer
+  // Gestion des images par Collage / Glisser-Déposer
   function processImageFile(file) {
     if (!file || !file.type.startsWith('image/')) return;
     const reader = new FileReader();
@@ -880,16 +884,16 @@
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX = 800; // Redimensionnement pour ne pas bloquer Firestore
+        const MAX = 800;
         let w = img.width, h = img.height;
         if (w > h && w > MAX) { h *= MAX / w; w = MAX; }
         else if (h > MAX) { w *= MAX / h; h = MAX; }
         canvas.width = w; canvas.height = h;
         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
         const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-        
+
         document.getElementById('itemImageBase64').value = dataUrl;
-        document.getElementById('itemImageUrl').value = ""; // Efface l'URL si on colle une image
+        document.getElementById('itemImageUrl').value = "";
         const preview = document.getElementById('imagePreview');
         preview.src = dataUrl;
         preview.style.display = 'block';
@@ -899,7 +903,6 @@
     reader.readAsDataURL(file);
   }
 
-  // Écouteurs de la zone Drop/Coller
   const dropZone = document.getElementById('dropZone');
   document.getElementById('modalItem').addEventListener('paste', (e) => {
     for (const item of e.clipboardData.items) {
@@ -914,10 +917,10 @@
   dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
   dropZone.addEventListener('drop', (e) => {
     e.preventDefault(); dropZone.classList.remove('dragover');
-    if(e.dataTransfer.files.length) processImageFile(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files.length) processImageFile(e.dataTransfer.files[0]);
   });
   document.getElementById('fileInput').addEventListener('change', (e) => {
-    if(e.target.files.length) processImageFile(e.target.files[0]);
+    if (e.target.files.length) processImageFile(e.target.files[0]);
   });
   document.getElementById('itemImageUrl').addEventListener('input', (e) => {
     if (e.target.value) {
@@ -928,19 +931,18 @@
 
   // Modales Cadeaux
   window.openItemModal = (item = null) => {
-    if(!isEditor) return;
+    if (!isEditor) return;
     document.getElementById("modalItemTitle").textContent = item ? "Modifier le cadeau" : "Nouveau cadeau";
     document.getElementById("itemId").value = item?.id || "";
     document.getElementById("itemTitle").value = item?.title || "";
     document.getElementById("itemCategory").value = item ? getItemCategory(item) : "";
     document.getElementById("itemPrice").value = item?.price ?? "";
     document.getElementById("itemUrl").value = item ? getItemUrl(item) : "";
-    
-    // Reset images
+
     document.getElementById("itemImageBase64").value = "";
     document.getElementById("itemImageUrl").value = "";
     document.getElementById("imagePreview").style.display = 'none';
-    
+
     const photo = item ? getItemPhoto(item) : "";
     if (photo.startsWith("data:image")) {
       document.getElementById("itemImageBase64").value = photo;
@@ -955,8 +957,9 @@
     document.getElementById("modalItem").showModal();
   };
 
+  document.getElementById("btnNewItem").onclick = () => openItemModal();
   window.editItem = (id) => { const it = cachedItems.find(x => x.id === id); if (it) openItemModal(it); };
-  
+
   window.deleteItem = async (id) => {
     if (await customConfirm("Supprimer ce cadeau de la liste ?")) {
       await db.collection("lists").doc(currentList.id).collection("items").doc(id).delete();
@@ -966,16 +969,15 @@
 
   // Transfert d'un cadeau
   window.openTransferModal = (id) => {
-    if(!isEditor) return;
+    if (!isEditor) return;
     transferItemId = id;
     const select = document.getElementById("transferListSelect");
-    // On affiche toutes les listes sauf l'actuelle
     const options = cachedLists
       .filter(l => l.id !== currentList.id)
       .map(l => `<option value="${escapeHtml(l.id)}">${escapeHtml(l.name)}</option>`);
-    
+
     if (options.length === 0) return showToast("Tu n'as pas d'autre liste !");
-    
+
     select.innerHTML = options.join("");
     document.getElementById("modalTransfer").showModal();
   };
@@ -986,13 +988,13 @@
     const item = cachedItems.find(x => x.id === transferItemId);
     if (!item || !targetListId) return;
 
-    // Ajoute à la nouvelle liste puis supprime de l'ancienne
+    const { id: _ignored, ...itemData } = item;
     await db.collection("lists").doc(targetListId).collection("items").add({
-      ...item, 
+      ...itemData,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     await db.collection("lists").doc(currentList.id).collection("items").doc(transferItemId).delete();
-    
+
     document.getElementById("modalTransfer").close();
     showToast("Cadeau déplacé !");
   };
