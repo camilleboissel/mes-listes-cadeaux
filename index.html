@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mes listes cadeaux</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+
+<!--
+  ===========================================================================
+  ÉTAPE À FAIRE (une seule) : coller la configuration Firebase ci-dessous.
+  Instructions complètes dans le fichier INSTRUCTIONS.md fourni à côté.
+  ===========================================================================
+-->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<style>
+  :root {
+    --ink: #1B2430;
+    --ink-soft: #3A4356;
+    --paper: #F6F4EF;
+    --paper-alt: #EFEAE0;
+    --gold: #C08A22;
+    --gold-soft: #EBD9AE;
+    --berry: #A8354A;
+    --berry-soft: #F1DCDF;
+    --sage: #4F6B52;
+    --sage-soft: #DCE6DA;
+    --line: #DCD5C4;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    font-family: 'Inter', sans-serif;
+    color: var(--ink);
+  }
+  .display { font-family: 'Fraunces', serif; }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+
+  header {
+    background: var(--ink);
+    padding: 24px 20px;
+  }
+  .header-inner {
+    max-width: 960px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand-icon {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--gold);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .brand-title { color: var(--paper); font-size: 20px; line-height: 1.1; }
+  .brand-sub { color: var(--gold-soft); font-size: 12px; margin-top: 4px; }
+  .btn-back {
+    color: var(--paper); background: transparent;
+    border: 1px solid var(--ink-soft); border-radius: 999px;
+    padding: 6px 14px; font-size: 13px; cursor: pointer;
+    font-family: 'Inter', sans-serif;
+  }
+
+  main { max-width: 960px; margin: 0 auto; padding: 32px 20px 80px; }
+
+  .row-between {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .count { font-family: 'Fraunces', serif; font-size: 17px; }
+  .btn-primary {
+    background: var(--ink); color: var(--paper); border: none;
+    border-radius: 999px; padding: 9px 16px; font-size: 14px;
+    cursor: pointer; font-family: 'Inter', sans-serif; font-weight: 500;
+  }
+
+  .empty {
+    border: 1px dashed var(--line); border-radius: 16px;
+    padding: 64px 24px; text-align: center;
+  }
+  .empty .display { font-size: 19px; margin: 12px 0 4px; }
+  .empty p { color: var(--ink-soft); font-size: 14px; margin: 0; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
+
+  .card-list {
+    background: white; border: 1px solid var(--line); border-radius: 16px;
+    padding: 20px; cursor: pointer; position: relative;
+  }
+  .swatch { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 8px; }
+  .card-list .eyebrow { color: var(--ink-soft); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .card-list .name { font-family: 'Fraunces', serif; font-size: 18px; margin-top: 10px; }
+  .card-list .desc { color: var(--ink-soft); font-size: 13px; margin-top: 4px; }
+  .card-list .actions-list { position: absolute; top: 14px; right: 14px; display: flex; gap: 4px; }
+  .card-list .actions-list button { background: none; border: none; cursor: pointer; font-size: 14px; padding: 2px; }
+  .card-list .del { color: var(--berry); }
+
+  .card-item { background: white; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+  .card-item .photo {
+    width: 100%; aspect-ratio: 4/3; background: var(--paper-alt);
+    display: flex; align-items: center; justify-content: center; font-size: 26px;
+  }
+  .card-item .body { padding: 16px; }
+  .card-item .title-row { display: flex; justify-content: space-between; gap: 8px; }
+  .card-item .title { font-family: 'Fraunces', serif; font-size: 16px; line-height: 1.3; }
+  .card-item .actions button { background: none; border: none; cursor: pointer; font-size: 14px; margin-left: 4px; }
+  .card-item .price { font-family: 'IBM Plex Mono', monospace; color: var(--gold); font-size: 14px; margin-top: 4px; }
+  .link-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--paper-alt); color: var(--ink); text-decoration: none;
+    font-size: 12px; padding: 6px 12px; border-radius: 999px; margin-top: 12px;
+  }
+  .reserve-zone { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 12px; }
+  .badge-reserved {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--sage-soft); color: var(--sage);
+    font-size: 12px; padding: 5px 12px; border-radius: 999px;
+  }
+  .btn-reserve {
+    background: var(--berry-soft); color: var(--berry); border: none;
+    font-size: 12px; padding: 7px 12px; border-radius: 999px; cursor: pointer;
+  }
+  .cancel-link { background: none; border: none; color: var(--ink-soft); font-size: 12px; text-decoration: underline; cursor: pointer; }
+  .reserve-form { display: flex; gap: 6px; }
+  .reserve-form input {
+    flex: 1; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--line); font-size: 12px;
+  }
+  .reserve-form button {
+    background: var(--ink); color: var(--paper); border: none; border-radius: 8px; padding: 0 10px; cursor: pointer;
+  }
+
+  .overlay {
+    position: fixed; inset: 0; background: rgba(27,36,48,0.55);
+    display: none; align-items: center; justify-content: center; padding: 16px; z-index: 50;
+  }
+  .overlay.open { display: flex; }
+  .modal {
+    background: var(--paper); border-radius: 20px; padding: 22px;
+    width: 100%; max-width: 420px; max-height: 90vh; overflow-y: auto; position: relative;
+  }
+  .modal h2 { font-family: 'Fraunces', serif; font-size: 18px; margin: 0 0 16px; }
+  .modal .close { position: absolute; top: 16px; right: 18px; background: none; border: none; font-size: 18px; cursor: pointer; color: var(--ink-soft); }
+  .field { margin-bottom: 14px; }
+  .field label { font-size: 12px; color: var(--ink-soft); display: block; margin-bottom: 6px; }
+  .field input, .field select {
+    width: 100%; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line);
+    font-size: 14px; font-family: 'Inter', sans-serif; background: white;
+  }
+  .color-picker { display: flex; gap: 8px; }
+  .color-dot {
+    width: 26px; height: 26px; border-radius: 50%; border: none; cursor: pointer;
+  }
+  .color-dot.selected { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .submit-btn {
+    width: 100%; margin-top: 6px; padding: 11px; border-radius: 10px; border: none;
+    background: var(--ink); color: var(--paper); font-size: 14px; font-weight: 500; cursor: pointer;
+  }
+  .submit-btn:disabled { opacity: 0.4; cursor: default; }
+  .loading { display: flex; justify-content: center; padding: 60px 0; color: var(--ink-soft); }
+  .config-warning {
+    max-width: 560px; margin: 60px auto; padding: 24px; background: white;
+    border: 1px solid var(--berry); border-radius: 16px; text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<div id="config-warning" class="config-warning">
+  <div class="display" style="font-size:18px; margin-bottom:8px;">🎁 Presque prêt</div>
+  <p style="color:var(--ink-soft); font-size:14px;">
+    Cette page a besoin d'internet et d'une configuration pour fonctionner : ce n'est pas fait pour être
+    ouvert ici directement. Suis les étapes du fichier <b>INSTRUCTIONS.md</b>, puis ouvre le site via son
+    adresse en ligne (ex: <span class="mono">tonsite.vercel.app</span>), pas en double-cliquant sur ce fichier.
+  </p>
+</div>
+
+<div id="app" style="display:none;">
+  <header>
+    <div class="header-inner">
+      <div class="brand">
+        <div class="brand-icon">🎁</div>
+        <div>
+          <div id="header-title" class="brand-title display">Mes listes</div>
+          <div id="header-sub" class="brand-sub" style="display:none;"></div>
+        </div>
+      </div>
+      <button id="btn-back" class="btn-back" style="display:none;">&larr; Toutes les listes</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="view-lists">
+      <div class="row-between">
+        <div id="lists-count" class="count">0 liste</div>
+        <button class="btn-primary" id="btn-new-list">+ Nouvelle liste</button>
+      </div>
+      <div id="lists-container"><div class="loading">Chargement…</div></div>
+    </div>
+
+    <div id="view-items" style="display:none;">
+      <div class="row-between">
+        <div id="items-count" class="count">0 article</div>
+        <button class="btn-primary" id="btn-new-item">+ Ajouter un article</button>
+      </div>
+      <div id="items-container"><div class="loading">Chargement…</div></div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal : nouvelle/modifier liste -->
+<div class="overlay" id="overlay-list">
+  <div class="modal">
+    <button class="close" data-close="overlay-list">✕</button>
+    <h2 id="list-modal-title">Nouvelle liste</h2>
+    <div class="field">
+      <label>Nom de la liste</label>
+      <input id="input-list-name" placeholder="Ex : Anniversaire de Camille" />
+    </div>
+    <div class="field">
+      <label>Description (optionnel)</label>
+      <input id="input-list-desc" placeholder="Ex : 12 octobre — chez nous" />
+    </div>
+    <div class="field">
+      <label>Couleur</label>
+      <div class="color-picker" id="color-picker"></div>
+    </div>
+    <button class="submit-btn" id="btn-save-list">Créer la liste</button>
+  </div>
+</div>
+
+<!-- Modal : nouvel/modifier article -->
+<div class="overlay" id="overlay-item">
+  <div class="modal">
+    <button class="close" data-close="overlay-item">✕</button>
+    <h2 id="item-modal-title">Ajouter un article</h2>
+    <div class="field">
+      <label>Titre de l'article</label>
+      <input id="input-item-title" placeholder="Ex : Cocotte en fonte 26cm" autofocus />
+    </div>
+    <div class="field">
+      <label>Prix</label>
+      <input id="input-item-price" placeholder="Ex : 89,90" />
+    </div>
+    <div class="field">
+      <label>Lien du produit (optionnel)</label>
+      <input id="input-item-url" placeholder="Colle le lien direct vers le produit" />
+    </div>
+    <button class="submit-btn" id="btn-save-item">Ajouter à la liste</button>
+  </div>
+</div>
+
+<!-- Modal : transférer un article -->
+<div class="overlay" id="overlay-transfer">
+  <div class="modal">
+    <button class="close" data-close="overlay-transfer">✕</button>
+    <h2>Transférer le cadeau</h2>
+    <div class="field">
+      <label>Vers quelle liste souhaites-tu déplacer ce cadeau ?</label>
+      <select id="select-target-list"></select>
+    </div>
+    <button class="submit-btn" id="btn-confirm-transfer">Déplacer le cadeau</button>
+  </div>
+</div>
+
+<script>
+/* =========================================================================
+   1) CONFIGURATION FIREBASE — à remplacer (voir INSTRUCTIONS.md)
+   ========================================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyB6rvuMuhHfBFnmvOipW-3zPQ-rLXKdj3I",
+  authDomain: "liste-cadeaux-ad6b5.firebaseapp.com",
+  projectId: "liste-cadeaux-ad6b5",
+  storageBucket: "liste-cadeaux-ad6b5.firebasestorage.app",
+  messagingSenderId: "67071632348",
+  appId: "1:67071632348:web:87c8597c6bda3de1ece519"
+};
+/* ========================================================================= */
+
+const isConfigured = firebaseConfig.apiKey && firebaseConfig.apiKey.indexOf("COLLE_ICI") === -1;
+
+function startApp() {
+  if (!isConfigured) return;
+  try {
+    document.getElementById('config-warning').style.display = 'none';
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    document.getElementById('app').style.display = 'block';
+    runApp(db);
+  } catch (err) {
+    const warn = document.getElementById('config-warning');
+    warn.style.display = 'block';
+    warn.innerHTML = '<div class="display" style="font-size:18px;margin-bottom:8px;">Un souci est survenu</div>'
+      + '<p style="color:var(--ink-soft);font-size:14px;">' + String(err.message || err) + '</p>';
+  }
+}
+
+const LIST_COLORS = ["#C08A22", "#A8354A", "#4F6B52", "#5B6EAE", "#B06B3F"];
+const KNOWN_SITES = {
+  amazon: "Amazon", cultura: "Cultura", decathlon: "Decathlon", fnac: "Fnac",
+  cdiscount: "Cdiscount", leclerc: "E.Leclerc", darty: "Darty", boulanger: "Boulanger",
+  zalando: "Zalando", laredoute: "La Redoute", ikea: "IKEA", leroymerlin: "Leroy Merlin",
+  castorama: "Castorama", etsy: "Etsy", sephora: "Sephora", asos: "ASOS",
+  maisonsdumonde: "Maisons du Monde"
+};
+
+function guessSiteName(url) {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, "");
+    const domain = host.split(".")[0];
+    if (KNOWN_SITES[domain]) return KNOWN_SITES[domain];
+    return domain.charAt(0).toUpperCase() + domain.slice(1);
+  } catch (e) { return ""; }
+}
+
+function formatPrice(p) {
+  if (!p) return "";
+  const n = Number(String(p).replace(",", "."));
+  if (Number.isNaN(n)) return p;
+  return n.toLocaleString("fr-FR", { maximumFractionDigits: 2 }) + " €";
+}
+
+function el(tag, className, text) {
+  const e = document.createElement(tag);
+  if (className) e.className = className;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+
+function runApp(db) {
+  let currentListId = null;
+  let editingListId = null;
+  let editingItemId = null;
+  let transferringItem = null;
+  let selectedColor = LIST_COLORS[0];
+  let cachedLists = [];
+
+  const listsContainer = document.getElementById('lists-container');
+  const itemsContainer = document.getElementById('items-container');
+  const viewLists = document.getElementById('view-lists');
+  const viewItems = document.getElementById('view-items');
+  const headerTitle = document.getElementById('header-title');
+  const headerSub = document.getElementById('header-sub');
+  const btnBack = document.getElementById('btn-back');
+
+  // --- color picker setup ---
+  const colorPicker = document.getElementById('color-picker');
+  LIST_COLORS.forEach((c) => {
+    const dot = el('button', 'color-dot');
+    dot.style.background = c;
+    dot.onclick = () => {
+      selectedColor = c;
+      [...colorPicker.children].forEach(d => d.classList.remove('selected'));
+      dot.classList.add('selected');
+    };
+    colorPicker.appendChild(dot);
+  });
+  colorPicker.children[0].classList.add('selected');
+
+  function openOverlay(id) { document.getElementById(id).classList.add('open'); }
+  function closeOverlay(id) { document.getElementById(id).classList.remove('open'); }
+  document.querySelectorAll('[data-close]').forEach(btn => {
+    btn.onclick = () => closeOverlay(btn.dataset.close);
+  });
+
+  // --- LISTS ---
+  document.getElementById('btn-new-list').onclick = () => openListForm(null);
+
+  function openListForm(list) {
+    editingListId = list ? list.id : null;
+    document.getElementById('list-modal-title').textContent = list ? "Modifier la liste" : "Nouvelle liste";
+    document.getElementById('input-list-name').value = list ? list.name : '';
+    document.getElementById('input-list-desc').value = list ? (list.description || '') : '';
+    selectedColor = list && list.color ? list.color : LIST_COLORS[0];
+    
+    [...colorPicker.children].forEach((dot) => {
+      dot.classList.toggle('selected', dot.style.background === selectedColor);
+    });
+    document.getElementById('btn-save-list').textContent = list ? "Enregistrer" : "Créer la liste";
+    openOverlay('overlay-list');
+  }
+
+  document.getElementById('btn-save-list').onclick = () => {
+    const name = document.getElementById('input-list-name').value.trim();
+    if (!name) return;
+    const desc = document.getElementById('input-list-desc').value.trim();
+    
+    if (editingListId) {
+      db.collection('lists').doc(editingListId).update({
+        name, description: desc, color: selectedColor
+      });
+      if (currentListId === editingListId) {
+        headerTitle.textContent = name;
+        headerSub.textContent = desc || 'Liste de cadeaux';
+        headerSub.style.display = desc ? 'block' : 'none';
+      }
+    } else {
+      db.collection('lists').add({
+        name, description: desc, color: selectedColor,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+    closeOverlay('overlay-list');
+  };
+
+  db.collection('lists').orderBy('createdAt', 'desc').onSnapshot((snap) => {
+    const lists = [];
+    snap.forEach(doc => lists.push({ id: doc.id, ...doc.data() }));
+    cachedLists = lists;
+    document.getElementById('lists-count').textContent =
+      lists.length + (lists.length === 1 ? ' liste' : ' listes');
+
+    listsContainer.innerHTML = '';
+    if (lists.length === 0) {
+      const empty = el('div', 'empty');
+      empty.innerHTML = '<div style="font-size:24px;">🎁</div><div class="display">Aucune liste pour l'instant</div><p>Crée ta première liste de cadeaux pour commencer.</p>';
+      listsContainer.appendChild(empty);
+      return;
+    }
+    const grid = el('div', 'grid');
+    lists.forEach(l => {
+      const card = el('div', 'card-list');
+      const eyebrow = el('div', 'eyebrow');
+      const swatch = el('span', 'swatch'); swatch.style.background = l.color || LIST_COLORS[0];
+      eyebrow.appendChild(swatch);
+      eyebrow.appendChild(document.createTextNode('Liste'));
+      const name = el('div', 'name display', l.name);
+      card.appendChild(eyebrow);
+      card.appendChild(name);
+      if (l.description) card.appendChild(el('div', 'desc', l.description));
+      
+      const actionsList = el('div', 'actions-list');
+      const editListBtn = el('button', '', '✏️');
+      editListBtn.onclick = (e) => {
+        e.stopPropagation();
+        openListForm(l);
+      };
+      const del = el('button', 'del', '🗑');
+      del.onclick = (e) => {
+        e.stopPropagation();
+        if (confirm('Supprimer cette liste et tous ses articles ?')) {
+          db.collection('lists').doc(l.id).delete();
+        }
+      };
+      actionsList.appendChild(editListBtn);
+      actionsList.appendChild(del);
+      card.appendChild(actionsList);
+
+      card.onclick = () => openList(l.id, l.name, l.description);
+      grid.appendChild(card);
+    });
+    listsContainer.appendChild(grid);
+  });
+
+  function openList(id, name, description) {
+    currentListId = id;
+    headerTitle.textContent = name;
+    headerSub.textContent = description || 'Liste de cadeaux';
+    headerSub.style.display = description ? 'block' : 'none';
+    btnBack.style.display = 'inline-block';
+    viewLists.style.display = 'none';
+    viewItems.style.display = 'block';
+    subscribeItems(id);
+  }
+
+  btnBack.onclick = () => {
+    currentListId = null;
+    headerTitle.textContent = 'Mes listes';
+    headerSub.style.display = 'none';
+    btnBack.style.display = 'none';
+    viewItems.style.display = 'none';
+    viewLists.style.display = 'block';
+  };
+
+  // --- ITEMS ---
+  let unsubscribeItems = null;
+
+  function subscribeItems(listId) {
+    if (unsubscribeItems) unsubscribeItems();
+    unsubscribeItems = db.collection('lists').doc(listId).collection('items')
+      .orderBy('createdAt', 'desc')
+      .onSnapshot((snap) => {
+        const items = [];
+        snap.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
+        renderItems(items);
+      });
+  }
+
+  function renderItems(items) {
+    document.getElementById('items-count').textContent =
+      items.length + (items.length === 1 ? ' article' : ' articles');
+
+    itemsContainer.innerHTML = '';
+    if (items.length === 0) {
+      const empty = el('div', 'empty');
+      empty.innerHTML = '<div style="font-size:24px;">🛍️</div><div class="display">Liste vide</div><p>Ajoute un premier article avec son titre et son prix.</p>';
+      itemsContainer.appendChild(empty);
+      return;
+    }
+    const grid = el('div', 'grid');
+    items.forEach(it => grid.appendChild(renderItemCard(it)));
+    itemsContainer.appendChild(grid);
+  }
+
+  function renderItemCard(it) {
+    const card = el('div', 'card-item');
+    const photo = el('div', 'photo');
+    photo.textContent = '🎁';
+    card.appendChild(photo);
+
+    const body = el('div', 'body');
+    const titleRow = el('div', 'title-row');
+    titleRow.appendChild(el('div', 'title', it.title));
+    const actions = el('div', 'actions');
+    
+    const transferBtn = el('button', '', '➡️');
+    transferBtn.title = "Transférer vers une autre liste";
+    transferBtn.onclick = () => openTransferModal(it);
+
+    const editBtn = el('button', '', '✏️');
+    editBtn.onclick = () => openItemForm(it);
+    
+    const delBtn = el('button', '', '🗑');
+    delBtn.style.color = 'var(--berry)';
+    delBtn.onclick = () => {
+      if (confirm('Supprimer cet article ?')) {
+        db.collection('lists').doc(currentListId).collection('items').doc(it.id).delete();
+      }
+    };
+    
+    actions.appendChild(transferBtn);
+    actions.appendChild(editBtn);
+    actions.appendChild(delBtn);
+    titleRow.appendChild(actions);
+    body.appendChild(titleRow);
+
+    if (it.price) body.appendChild(el('div', 'price', formatPrice(it.price)));
+
+    if (it.url) {
+      const a = el('a', 'link-btn');
+      a.href = it.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+      a.textContent = 'Voir sur ' + (it.siteName || 'le site') + '  ↗';
+      body.appendChild(a);
+    }
+
+    const reserveZone = el('div', 'reserve-zone');
+    if (it.reservedBy) {
+      const wrap = el('div');
+      wrap.style.display = 'flex'; wrap.style.justifyContent = 'space-between'; wrap.style.alignItems = 'center';
+      const badge = el('span', 'badge-reserved', '🏷 Réservé par ' + it.reservedBy);
+      const cancel = el('button', 'cancel-link', 'annuler');
+      cancel.onclick = () => {
+        db.collection('lists').doc(currentListId).collection('items').doc(it.id).update({ reservedBy: null });
+      };
+      wrap.appendChild(badge); wrap.appendChild(cancel);
+      reserveZone.appendChild(wrap);
+    } else {
+      const reserveBtn = el('button', 'btn-reserve', 'Réserver ce cadeau');
+      reserveBtn.onclick = () => {
+        reserveZone.innerHTML = '';
+        const form = el('div', 'reserve-form');
+        const input = document.createElement('input');
+        input.placeholder = 'Ton prénom';
+        const ok = el('button', '', '✓');
+        const submit = () => {
+          const name = input.value.trim();
+          if (!name) return;
+          db.collection('lists').doc(currentListId).collection('items').doc(it.id)
+            .update({ reservedBy: name });
+        };
+        ok.onclick = submit;
+        input.onkeydown = (e) => { if (e.key === 'Enter') submit(); };
+        form.appendChild(input); form.appendChild(ok);
+        reserveZone.appendChild(form);
+        input.focus();
+      };
+      reserveZone.appendChild(reserveBtn);
+    }
+    body.appendChild(reserveZone);
+    card.appendChild(body);
+    return card;
+  }
+
+  document.getElementById('btn-new-item').onclick = () => openItemForm(null);
+
+  function openItemForm(item) {
+    editingItemId = item ? item.id : null;
+    document.getElementById('item-modal-title').textContent = item ? "Modifier l'article" : 'Ajouter un article';
+    document.getElementById('input-item-title').value = item ? item.title : '';
+    document.getElementById('input-item-price').value = item ? (item.price || '') : '';
+    document.getElementById('input-item-url').value = item ? (item.url || '') : '';
+    document.getElementById('btn-save-item').textContent = item ? 'Enregistrer' : 'Ajouter à la liste';
+    openOverlay('overlay-item');
+  }
+
+  // --- TRANSFERT D'ARTICLE ---
+  function openTransferModal(item) {
+    transferringItem = item;
+    const select = document.getElementById('select-target-list');
+    select.innerHTML = '';
+
+    const otherLists = cachedLists.filter(l => l.id !== currentListId);
+    if (otherLists.length === 0) {
+      alert("Tu n'as pas d'autre liste vers laquelle transférer ce cadeau.");
+      return;
+    }
+
+    otherLists.forEach(l => {
+      const opt = document.createElement('option');
+      opt.value = l.id;
+      opt.textContent = l.name;
+      select.appendChild(opt);
+    });
+
+    openOverlay('overlay-transfer');
+  }
+
+  document.getElementById('btn-confirm-transfer').onclick = () => {
+    if (!transferringItem) return;
+    const targetListId = document.getElementById('select-target-list').value;
+    if (!targetListId) return;
+
+    const itemData = { ...transferringItem };
+    delete itemData.id;
+
+    const targetRef = db.collection('lists').doc(targetListId).collection('items');
+    
+    targetRef.add({
+      ...itemData,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).then(() => {
+      return db.collection('lists').doc(currentListId).collection('items').doc(transferringItem.id).delete();
+    }).then(() => {
+      closeOverlay('overlay-transfer');
+      transferringItem = null;
+    }).catch(err => {
+      alert("Erreur lors du transfert : " + err.message);
+    });
+  };
+
+  document.getElementById('btn-save-item').onclick = () => {
+    const title = document.getElementById('input-item-title').value.trim();
+    if (!title) return;
+    const price = document.getElementById('input-item-price').value.trim();
+    const url = document.getElementById('input-item-url').value.trim();
+    const siteName = url ? guessSiteName(url) : '';
+    const data = { title, price, url, siteName };
+
+    const itemsRef = db.collection('lists').doc(currentListId).collection('items');
+    if (editingItemId) {
+      itemsRef.doc(editingItemId).update(data);
+    } else {
+      itemsRef.add({ ...data, reservedBy: null, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+    }
+    closeOverlay('overlay-item');
+  };
+}
+
+startApp();
+</script>
+</body>
+</html>
