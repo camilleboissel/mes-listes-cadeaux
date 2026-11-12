@@ -5,14 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Mes listes cadeaux</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 
-<!--
-  ===========================================================================
-  ÉTAPE À FAIRE (une seule) : coller la configuration Firebase ci-dessous.
-  Instructions complètes dans le fichier INSTRUCTIONS.md fourni à côté.
-  ===========================================================================
--->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
@@ -29,17 +24,35 @@
     --sage: #4F6B52;
     --sage-soft: #DCE6DA;
     --line: #DCD5C4;
+    --radius: 16px;
+    --shadow-sm: 0 2px 8px rgba(27, 36, 48, 0.04);
+    --shadow-md: 0 8px 24px rgba(27, 36, 48, 0.08);
   }
+
   * { box-sizing: border-box; }
+
   body {
     margin: 0;
     background: var(--paper);
     font-family: 'Inter', sans-serif;
     color: var(--ink);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
   }
+
   .display { font-family: 'Fraunces', serif; }
   .mono { font-family: 'IBM Plex Mono', monospace; }
 
+  button, input, textarea, select {
+    font-family: inherit;
+  }
+
+  button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+  }
+
+  /* Header */
   header {
     background: var(--ink);
     padding: 24px 20px;
@@ -50,68 +63,626 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 16px;
   }
-  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand { display: flex; align-items: center; gap: 12px; cursor: pointer; }
   .brand-icon {
-    width: 36px; height: 36px; border-radius: 50%;
+    width: 38px; height: 38px; border-radius: 50%;
     background: var(--gold);
     display: flex; align-items: center; justify-content: center;
     font-size: 18px; flex-shrink: 0;
   }
-  .brand-title { color: var(--paper); font-size: 20px; line-height: 1.1; }
-  .brand-sub { color: var(--gold-soft); font-size: 12px; margin-top: 4px; }
+  .brand-title { color: var(--paper); font-size: 20px; line-height: 1.15; font-weight: 600; }
+  .brand-sub { color: var(--gold-soft); font-size: 12px; margin-top: 3px; }
+
+  .header-actions { display: flex; gap: 8px; align-items: center; }
+
   .btn-back {
     color: var(--paper); background: transparent;
     border: 1px solid var(--ink-soft); border-radius: 999px;
-    padding: 6px 14px; font-size: 13px; cursor: pointer;
-    font-family: 'Inter', sans-serif;
+    padding: 7px 14px; font-size: 13px; cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
   }
+  .btn-back:hover { background: rgba(255, 255, 255, 0.08); border-color: var(--paper); }
 
+  /* Layout */
   main { max-width: 960px; margin: 0 auto; padding: 32px 20px 80px; }
+
+  .alert-config {
+    background: var(--berry-soft);
+    border: 1px solid var(--berry);
+    color: var(--ink);
+    padding: 14px 18px;
+    border-radius: 12px;
+    font-size: 14px;
+    margin-bottom: 24px;
+    display: none;
+  }
 
   .row-between {
     display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 20px;
+    flex-wrap: wrap; gap: 12px;
+    margin-bottom: 24px;
   }
-  .count { font-family: 'Fraunces', serif; font-size: 17px; }
+  .count { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 600; }
+  .meta-sub { color: var(--ink-soft); font-size: 13px; margin-top: 2px; }
+
   .btn-primary {
     background: var(--ink); color: var(--paper); border: none;
-    border-radius: 999px; padding: 9px 16px; font-size: 14px;
-    cursor: pointer; font-family: 'Inter', sans-serif; font-weight: 500;
+    border-radius: 999px; padding: 10px 18px; font-size: 14px;
+    cursor: pointer; font-weight: 500;
+    transition: transform 0.15s ease, background 0.15s ease;
   }
+  .btn-primary:hover { background: var(--ink-soft); transform: translateY(-1px); }
 
+  .btn-secondary {
+    background: var(--paper-alt); color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 999px; padding: 9px 16px; font-size: 13px;
+    cursor: pointer; font-weight: 500;
+    transition: background 0.15s ease;
+  }
+  .btn-secondary:hover { background: var(--line); }
+
+  /* Empty state */
   .empty {
-    border: 1px dashed var(--line); border-radius: 16px;
+    border: 1px dashed var(--line); border-radius: var(--radius);
     padding: 64px 24px; text-align: center;
+    background: rgba(255, 255, 255, 0.4);
   }
-  .empty .display { font-size: 19px; margin: 12px 0 4px; }
-  .empty p { color: var(--ink-soft); font-size: 14px; margin: 0; }
+  .empty-icon { font-size: 32px; }
+  .empty .display { font-size: 20px; margin: 12px 0 6px; font-weight: 600; }
+  .empty p { color: var(--ink-soft); font-size: 14px; margin: 0 0 20px; }
 
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
+  /* Grid & Cards */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 18px; }
 
   .card-list {
-    background: white; border: 1px solid var(--line); border-radius: 16px;
+    background: white; border: 1px solid var(--line); border-radius: var(--radius);
     padding: 20px; cursor: pointer; position: relative;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
   }
-  .swatch { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 8px; }
-  .card-list .eyebrow { color: var(--ink-soft); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
-  .card-list .name { font-family: 'Fraunces', serif; font-size: 18px; margin-top: 10px; }
-  .card-list .desc { color: var(--ink-soft); font-size: 13px; margin-top: 4px; }
-  .card-list .actions-list { position: absolute; top: 14px; right: 14px; display: flex; gap: 4px; }
-  .card-list .actions-list button { background: none; border: none; cursor: pointer; font-size: 14px; padding: 2px; }
-  .card-list .del { color: var(--berry); }
+  .card-list:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--gold);
+  }
+  .swatch { width: 11px; height: 11px; border-radius: 50%; display: inline-block; margin-right: 6px; vertical-align: middle; }
+  .card-list .eyebrow { color: var(--ink-soft); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+  .card-list .name { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 600; margin-top: 10px; padding-right: 52px; overflow-wrap: break-word; }
+  .card-list .desc { color: var(--ink-soft); font-size: 13px; margin-top: 6px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
-  .card-item { background: white; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+  /* Boutons d'action accessibles (zone tactile >= 32px) */
+  .icon-btn {
+    background: var(--paper); border: 1px solid transparent; border-radius: 8px;
+    cursor: pointer; font-size: 14px; width: 32px; height: 32px;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .icon-btn:hover { background: var(--paper-alt); border-color: var(--line); }
+  .icon-btn.del { color: var(--berry); }
+  .icon-btn.del:hover { background: var(--berry-soft); border-color: var(--berry); }
+
+  .card-list .actions-list { position: absolute; top: 14px; right: 14px; display: flex; gap: 4px; }
+
+  /* Gift Item Cards */
+  .card-item {
+    background: white; border: 1px solid var(--line); border-radius: var(--radius);
+    overflow: hidden; display: flex; flex-direction: column;
+    box-shadow: var(--shadow-sm);
+    transition: opacity 0.2s ease, transform 0.18s ease;
+  }
+  .card-item.reserved { opacity: 0.72; background: #FAF9F6; }
   .card-item .photo {
     width: 100%; aspect-ratio: 4/3; background: var(--paper-alt);
-    display: flex; align-items: center; justify-content: center; font-size: 26px;
+    display: flex; align-items: center; justify-content: center; font-size: 32px;
+    position: relative; overflow: hidden;
   }
-  .card-item .body { padding: 16px; }
-  .card-item .title-row { display: flex; justify-content: space-between; gap: 8px; }
-  .card-item .title { font-family: 'Fraunces', serif; font-size: 16px; line-height: 1.3; }
-  .card-item .actions button { background: none; border: none; cursor: pointer; font-size: 14px; margin-left: 4px; }
-  .card-item .price { font-family: 'IBM Plex Mono', monospace; color: var(--gold); font-size: 14px; margin-top: 4px; }
+  .card-item .photo img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+  .badge-status {
+    position: absolute; top: 10px; left: 10px;
+    font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 999px;
+    background: var(--sage-soft); color: var(--sage);
+  }
+  .badge-priority {
+    position: absolute; top: 10px; right: 10px;
+    font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 999px;
+    background: var(--gold-soft); color: #7C550E;
+  }
+
+  .card-item .body { padding: 16px; display: flex; flex-direction: column; flex: 1; }
+  .card-item .title-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+  .card-item .title { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 600; line-height: 1.3; overflow-wrap: break-word; }
+  .card-item.reserved .title { text-decoration: line-through; color: var(--ink-soft); }
+  .card-item .actions { display: flex; gap: 4px; flex-shrink: 0; }
+  .card-item .price { font-family: 'IBM Plex Mono', monospace; color: var(--gold); font-size: 14px; margin-top: 6px; font-weight: 500; }
+  .card-item .note { color: var(--ink-soft); font-size: 13px; margin-top: 8px; }
+
+  .card-footer {
+    margin-top: auto; padding-top: 14px;
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  }
+
   .link-btn {
-    display: inline-flex; align-items: center; gap: 4px;
+    display: inline-flex; align-items: center; gap: 5px;
     background: var(--paper-alt); color: var(--ink); text-decoration: none;
-    font-size: 12px; padding: 6px 12px; border-radius
+    font-size: 12px; font-weight: 500; padding: 7px 12px; border-radius: 999px;
+    transition: background 0.15s ease;
+  }
+  .link-btn:hover { background: var(--line); }
+
+  .reserve-btn {
+    background: transparent; border: 1px solid var(--sage); color: var(--sage);
+    font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 999px;
+    cursor: pointer; transition: all 0.15s ease; margin-left: auto;
+  }
+  .reserve-btn:hover { background: var(--sage-soft); }
+  .reserve-btn.is-reserved { background: var(--sage); color: white; }
+
+  /* Modal */
+  dialog {
+    border: 1px solid var(--line); border-radius: var(--radius);
+    background: var(--paper); color: var(--ink);
+    padding: 24px; width: min(460px, calc(100% - 32px));
+    box-shadow: var(--shadow-md);
+  }
+  dialog::backdrop { background: rgba(27, 36, 48, 0.55); backdrop-filter: blur(2px); }
+  dialog h2 { margin: 0 0 16px; font-family: 'Fraunces', serif; font-size: 21px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12px; font-weight: 600; color: var(--ink-soft); margin-bottom: 5px; }
+  .field input, .field textarea, .field select {
+    width: 100%; padding: 10px 12px; border-radius: 10px;
+    border: 1px solid var(--line); background: white; font-size: 14px; color: var(--ink);
+  }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--ink); color: var(--paper);
+    padding: 10px 18px; border-radius: 999px; font-size: 13px;
+    box-shadow: var(--shadow-md); opacity: 0; pointer-events: none;
+    transition: opacity 0.2s ease; z-index: 100;
+  }
+  .toast.show { opacity: 1; }
+
+  @media (max-width: 520px) {
+    .header-inner { flex-direction: column; align-items: flex-start; }
+    .header-actions { width: 100%; justify-content: flex-end; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="brand" id="brandHome" title="Retour aux listes">
+      <div class="brand-icon">🎁</div>
+      <div>
+        <div class="brand-title display" id="headerTitle">Mes listes cadeaux</div>
+        <div class="brand-sub" id="headerSub">Idées & envies à partager</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn-back" id="btnShare" style="display:none;">🔗 Partager</button>
+      <button class="btn-back" id="btnBack" style="display:none;">← Toutes les listes</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="alert-config" id="configAlert">
+    ⚠️ <strong>Configuration Firebase manquante :</strong> colle ton objet <code>firebaseConfig</code> dans le script en bas du fichier pour enregistrer tes listes en ligne.
+  </div>
+
+  <!-- VUE 1 : LISTES -->
+  <section id="viewLists">
+    <div class="row-between">
+      <div>
+        <div class="count" id="listsCount">Mes listes</div>
+        <div class="meta-sub">Crée une liste par personne ou par événement</div>
+      </div>
+      <button class="btn-primary" id="btnNewList">+ Nouvelle liste</button>
+    </div>
+    <div id="listsContainer"></div>
+  </section>
+
+  <!-- VUE 2 : CADEAUX D'UNE LISTE -->
+  <section id="viewItems" style="display:none;">
+    <div class="row-between">
+      <div>
+        <div class="count" id="itemsCount">0 idée</div>
+        <div class="meta-sub" id="itemsSummary"></div>
+      </div>
+      <button class="btn-primary" id="btnNewItem">+ Ajouter un cadeau</button>
+    </div>
+    <div id="itemsContainer"></div>
+  </section>
+</main>
+
+<!-- MODALE LISTE -->
+<dialog id="modalList">
+  <form id="formList">
+    <h2 id="modalListTitle">Nouvelle liste</h2>
+    <input type="hidden" id="listId" />
+    <div class="field">
+      <label for="listOccasion">Occasion / Catégorie</label>
+      <input id="listOccasion" placeholder="Ex. Noël 2026, Anniversaire, Naissance..." />
+    </div>
+    <div class="field">
+      <label for="listName">Nom de la liste *</label>
+      <input id="listName" required placeholder="Ex. Liste de Camille" />
+    </div>
+    <div class="field">
+      <label for="listDesc">Description (optionnel)</label>
+      <textarea id="listDesc" rows="2" placeholder="Tailles, couleurs préférées, remarques..."></textarea>
+    </div>
+    <div class="field">
+      <label for="listColor">Couleur repère</label>
+      <select id="listColor">
+        <option value="#C08A22">Or</option>
+        <option value="#A8354A">Bordeaux</option>
+        <option value="#4F6B52">Sauge</option>
+        <option value="#1B2430">Encre</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn-secondary" onclick="document.getElementById('modalList').close()">Annuler</button>
+      <button type="submit" class="btn-primary">Enregistrer</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- MODALE CADEAU -->
+<dialog id="modalItem">
+  <form id="formItem">
+    <h2 id="modalItemTitle">Nouveau cadeau</h2>
+    <input type="hidden" id="itemId" />
+    <div class="field">
+      <label for="itemTitle">Nom du cadeau *</label>
+      <input id="itemTitle" required placeholder="Ex. Cafetière italienne Bialetti" />
+    </div>
+    <div class="field">
+      <label for="itemPrice">Prix estimé (€)</label>
+      <input id="itemPrice" type="number" step="0.01" min="0" placeholder="Ex. 39.90" />
+    </div>
+    <div class="field">
+      <label for="itemUrl">Lien boutique (optionnel)</label>
+      <input id="itemUrl" type="url" placeholder="https://..." />
+    </div>
+    <div class="field">
+      <label for="itemImage">URL d'une photo (optionnel)</label>
+      <input id="itemImage" type="url" placeholder="https://..." />
+    </div>
+    <div class="field">
+      <label for="itemPriority">Priorité</label>
+      <select id="itemPriority">
+        <option value="normal">Normale</option>
+        <option value="high">⭐ Coup de cœur</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="itemNote">Précisions (taille, coloris...)</label>
+      <textarea id="itemNote" rows="2"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn-secondary" onclick="document.getElementById('modalItem').close()">Annuler</button>
+      <button type="submit" class="btn-primary">Enregistrer</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ===========================================================================
+  // ÉTAPE À FAIRE : colle ta configuration Firebase ci-dessous
+  // ===========================================================================
+  const firebaseConfig = {
+    apiKey: "COLLER_ICI",
+    authDomain: "COLLER_ICI",
+    projectId: "COLLER_ICI",
+    storageBucket: "COLLER_ICI",
+    messagingSenderId: "COLLER_ICI",
+    appId: "COLLER_ICI"
+  };
+
+  let db = null;
+  let currentList = null;
+  let unsubscribeLists = null;
+  let unsubscribeItems = null;
+
+  const isConfigured = firebaseConfig.apiKey && firebaseConfig.apiKey !== "COLLER_ICI";
+  if (!isConfigured) {
+    document.getElementById("configAlert").style.display = "block";
+  } else {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+  }
+
+  function showToast(msg) {
+    const el = document.getElementById("toast");
+    el.textContent = msg;
+    el.classList.add("show");
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.classList.remove("show"), 2600);
+  }
+
+  function escapeHtml(str = "") {
+    return String(str).replace(/[&<>"']/g, m => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[m]));
+  }
+
+  // Navigation
+  function showListsView() {
+    currentList = null;
+    if (unsubscribeItems) { unsubscribeItems(); unsubscribeItems = null; }
+    history.replaceState(null, "", location.pathname);
+    document.getElementById("headerTitle").textContent = "Mes listes cadeaux";
+    document.getElementById("headerSub").textContent = "Idées & envies à partager";
+    document.getElementById("btnBack").style.display = "none";
+    document.getElementById("btnShare").style.display = "none";
+    document.getElementById("viewItems").style.display = "none";
+    document.getElementById("viewLists").style.display = "block";
+  }
+
+  function openList(list) {
+    currentList = list;
+    history.replaceState(null, "", `?list=${encodeURIComponent(list.id)}`);
+    document.getElementById("headerTitle").textContent = list.name;
+    document.getElementById("headerSub").textContent = list.occasion || "Liste de souhaits";
+    document.getElementById("btnBack").style.display = "inline-block";
+    document.getElementById("btnShare").style.display = "inline-block";
+    document.getElementById("viewLists").style.display = "none";
+    document.getElementById("viewItems").style.display = "block";
+    listenItems(list.id);
+  }
+
+  document.getElementById("btnBack").onclick = showListsView;
+  document.getElementById("brandHome").onclick = showListsView;
+  document.getElementById("btnShare").onclick = async () => {
+    try {
+      await navigator.clipboard.writeText(location.href);
+      showToast("Lien de la liste copié !");
+    } catch {
+      showToast("Copie le lien depuis la barre d'adresse");
+    }
+  };
+
+  // Rendu des listes
+  function renderLists(lists) {
+    const container = document.getElementById("listsContainer");
+    document.getElementById("listsCount").textContent =
+      `${lists.length} liste${lists.length > 1 ? "s" : ""}`;
+
+    if (!lists.length) {
+      container.innerHTML = `
+        <div class="empty">
+          <div class="empty-icon">✨</div>
+          <div class="display">Aucune liste pour le moment</div>
+          <p>Commence par créer une première liste d'idées cadeaux.</p>
+          <button class="btn-primary" onclick="openListModal()">+ Créer ma première liste</button>
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = `<div class="grid">${lists.map(l => `
+      <article class="card-list" data-id="${escapeHtml(l.id)}">
+        <div class="actions-list">
+          <button class="icon-btn" title="Modifier" onclick="event.stopPropagation(); editList('${escapeHtml(l.id)}')">✏️</button>
+          <button class="icon-btn del" title="Supprimer" onclick="event.stopPropagation(); deleteList('${escapeHtml(l.id)}')">🗑️</button>
+        </div>
+        <div class="eyebrow">
+          <span class="swatch" style="background:${escapeHtml(l.color || '#C08A22')}"></span>
+          ${escapeHtml(l.occasion || "Liste")}
+        </div>
+        <div class="name">${escapeHtml(l.name)}</div>
+        ${l.desc ? `<div class="desc">${escapeHtml(l.desc)}</div>` : ""}
+      </article>
+    `).join("")}</div>`;
+
+    container.querySelectorAll(".card-list").forEach(card => {
+      card.onclick = () => {
+        const found = lists.find(x => x.id === card.dataset.id);
+        if (found) openList(found);
+      };
+    });
+  }
+
+  // Rendu des cadeaux
+  function renderItems(items) {
+    const container = document.getElementById("itemsContainer");
+    const total = items.reduce((sum, it) => sum + (Number(it.price) || 0), 0);
+    const reservedCount = items.filter(it => it.reserved).length;
+
+    document.getElementById("itemsCount").textContent =
+      `${items.length} idée${items.length > 1 ? "s" : ""}`;
+    document.getElementById("itemsSummary").textContent =
+      items.length
+        ? `Total estimé : ${total.toFixed(2)} € • ${reservedCount} réservé${reservedCount > 1 ? "s" : ""}`
+        : (currentList?.desc || "Ajoute une première idée ci-contre");
+
+    if (!items.length) {
+      container.innerHTML = `
+        <div class="empty">
+          <div class="empty-icon">🎀</div>
+          <div class="display">Cette liste est encore vide</div>
+          <p>Ajoute des idées avec leur prix et un lien vers la boutique.</p>
+          <button class="btn-primary" onclick="openItemModal()">+ Ajouter un cadeau</button>
+        </div>`;
+      return;
+    }
+
+    // Trier : disponibles d'abord, coups de cœur en haut
+    const sorted = [...items].sort((a, b) => {
+      if (Boolean(a.reserved) !== Boolean(b.reserved)) return a.reserved ? 1 : -1;
+      if ((a.priority === "high") !== (b.priority === "high")) return a.priority === "high" ? -1 : 1;
+      return 0;
+    });
+
+    container.innerHTML = `<div class="grid">${sorted.map(it => `
+      <article class="card-item ${it.reserved ? "reserved" : ""}">
+        <div class="photo">
+          ${it.image ? `<img src="${escapeHtml(it.image)}" alt="${escapeHtml(it.title)}" loading="lazy" onerror="this.remove()">` : "🎁"}
+          ${it.reserved ? `<span class="badge-status">✓ Réservé</span>` : ""}
+          ${!it.reserved && it.priority === "high" ? `<span class="badge-priority">⭐ Coup de cœur</span>` : ""}
+        </div>
+        <div class="body">
+          <div class="title-row">
+            <div class="title">${escapeHtml(it.title)}</div>
+            <div class="actions">
+              <button class="icon-btn" title="Modifier" onclick="editItem('${escapeHtml(it.id)}')">✏️</button>
+              <button class="icon-btn del" title="Supprimer" onclick="deleteItem('${escapeHtml(it.id)}')">🗑️</button>
+            </div>
+          </div>
+          ${it.price ? `<div class="price">${Number(it.price).toFixed(2)} €</div>` : ""}
+          ${it.note ? `<div class="note">${escapeHtml(it.note)}</div>` : ""}
+          <div class="card-footer">
+            ${it.url ? `<a class="link-btn" href="${escapeHtml(it.url)}" target="_blank" rel="noopener noreferrer">Voir ↗</a>` : ""}
+            <button class="reserve-btn ${it.reserved ? "is-reserved" : ""}" onclick="toggleReserve('${escapeHtml(it.id)}', ${Boolean(it.reserved)})">
+              ${it.reserved ? "Réservé" : "Je l'offre"}
+            </button>
+          </div>
+        </div>
+      </article>
+    `).join("")}</div>`;
+  }
+
+  // Firestore Listeners & CRUD
+  let cachedLists = [];
+  let cachedItems = [];
+
+  function initRealtime() {
+    if (!db) return;
+    unsubscribeLists = db.collection("lists").orderBy("createdAt", "desc").onSnapshot(snap => {
+      cachedLists = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderLists(cachedLists);
+
+      // Ouverture directe via ?list=ID
+      const paramId = new URLSearchParams(location.search).get("list");
+      if (paramId && !currentList) {
+        const target = cachedLists.find(l => l.id === paramId);
+        if (target) openList(target);
+      }
+    });
+  }
+
+  function listenItems(listId) {
+    if (!db) return;
+    if (unsubscribeItems) unsubscribeItems();
+    unsubscribeItems = db.collection("lists").doc(listId).collection("items")
+      .orderBy("createdAt", "desc")
+      .onSnapshot(snap => {
+        cachedItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderItems(cachedItems);
+      });
+  }
+
+  // Modales Listes
+  window.openListModal = (list = null) => {
+    document.getElementById("modalListTitle").textContent = list ? "Modifier la liste" : "Nouvelle liste";
+    document.getElementById("listId").value = list?.id || "";
+    document.getElementById("listOccasion").value = list?.occasion || "";
+    document.getElementById("listName").value = list?.name || "";
+    document.getElementById("listDesc").value = list?.desc || "";
+    document.getElementById("listColor").value = list?.color || "#C08A22";
+    document.getElementById("modalList").showModal();
+  };
+
+  window.editList = (id) => {
+    const l = cachedLists.find(x => x.id === id);
+    if (l) openListModal(l);
+  };
+
+  window.deleteList = async (id) => {
+    if (!db || !confirm("Supprimer cette liste ?")) return;
+    await db.collection("lists").doc(id).delete();
+    showToast("Liste supprimée");
+  };
+
+  document.getElementById("btnNewList").onclick = () => openListModal();
+  document.getElementById("formList").onsubmit = async (e) => {
+    e.preventDefault();
+    if (!db) return alert("Configure d'abord Firebase !");
+    const id = document.getElementById("listId").value;
+    const payload = {
+      occasion: document.getElementById("listOccasion").value.trim(),
+      name: document.getElementById("listName").value.trim(),
+      desc: document.getElementById("listDesc").value.trim(),
+      color: document.getElementById("listColor").value
+    };
+    if (id) {
+      await db.collection("lists").doc(id).update(payload);
+      showToast("Liste mise à jour");
+    } else {
+      await db.collection("lists").add({ ...payload, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+      showToast("Liste créée");
+    }
+    document.getElementById("modalList").close();
+  };
+
+  // Modales Cadeaux
+  window.openItemModal = (item = null) => {
+    document.getElementById("modalItemTitle").textContent = item ? "Modifier le cadeau" : "Nouveau cadeau";
+    document.getElementById("itemId").value = item?.id || "";
+    document.getElementById("itemTitle").value = item?.title || "";
+    document.getElementById("itemPrice").value = item?.price || "";
+    document.getElementById("itemUrl").value = item?.url || "";
+    document.getElementById("itemImage").value = item?.image || "";
+    document.getElementById("itemPriority").value = item?.priority || "normal";
+    document.getElementById("itemNote").value = item?.note || "";
+    document.getElementById("modalItem").showModal();
+  };
+
+  window.editItem = (id) => {
+    const it = cachedItems.find(x => x.id === id);
+    if (it) openItemModal(it);
+  };
+
+  window.deleteItem = async (id) => {
+    if (!db || !currentList || !confirm("Supprimer ce cadeau ?")) return;
+    await db.collection("lists").doc(currentList.id).collection("items").doc(id).delete();
+    showToast("Cadeau supprimé");
+  };
+
+  window.toggleReserve = async (id, currentStatus) => {
+    if (!db || !currentList) return;
+    await db.collection("lists").doc(currentList.id).collection("items").doc(id).update({
+      reserved: !currentStatus
+    });
+    showToast(!currentStatus ? "Cadeau marqué comme réservé" : "Réservation annulée");
+  };
+
+  document.getElementById("btnNewItem").onclick = () => openItemModal();
+  document.getElementById("formItem").onsubmit = async (e) => {
+    e.preventDefault();
+    if (!db || !currentList) return;
+    const id = document.getElementById("itemId").value;
+    const priceVal = document.getElementById("itemPrice").value;
+    const payload = {
+      title: document.getElementById("itemTitle").value.trim(),
+      price: priceVal ? parseFloat(priceVal) : null,
+      url: document.getElementById("itemUrl").value.trim(),
+      image: document.getElementById("itemImage").value.trim(),
+      priority: document.getElementById("itemPriority").value,
+      note: document.getElementById("itemNote").value.trim()
+    };
+    const col = db.collection("lists").doc(currentList.id).collection("items");
+    if (id) {
+      await col.doc(id).update(payload);
+      showToast("Cadeau mis à jour");
+    } else {
+      await col.add({ ...payload, reserved: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+      showToast("Cadeau ajouté");
+    }
+    document.getElementById("modalItem").close();
+  };
+
+  initRealtime();
+</script>
+</body>
+</html>
