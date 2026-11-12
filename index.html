@@ -43,9 +43,7 @@
   .display { font-family: 'Fraunces', serif; }
   .mono { font-family: 'IBM Plex Mono', monospace; }
 
-  button, input, textarea, select {
-    font-family: inherit;
-  }
+  button, input, textarea, select { font-family: inherit; }
 
   button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
     outline: 2px solid var(--gold);
@@ -88,21 +86,10 @@
   /* Layout */
   main { max-width: 960px; margin: 0 auto; padding: 32px 20px 80px; }
 
-  .alert-config {
-    background: var(--berry-soft);
-    border: 1px solid var(--berry);
-    color: var(--ink);
-    padding: 14px 18px;
-    border-radius: 12px;
-    font-size: 14px;
-    margin-bottom: 24px;
-    display: none;
-  }
-
   .row-between {
     display: flex; align-items: center; justify-content: space-between;
     flex-wrap: wrap; gap: 12px;
-    margin-bottom: 24px;
+    margin-bottom: 20px;
   }
   .count { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 600; }
   .meta-sub { color: var(--ink-soft); font-size: 13px; margin-top: 2px; }
@@ -123,6 +110,22 @@
     transition: background 0.15s ease;
   }
   .btn-secondary:hover { background: var(--line); }
+
+  /* Filtres catégories */
+  .filters-bar {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin-bottom: 20px;
+  }
+  .filter-pill {
+    background: white; color: var(--ink-soft);
+    border: 1px solid var(--line); border-radius: 999px;
+    padding: 6px 14px; font-size: 12px; font-weight: 500;
+    cursor: pointer; transition: all 0.15s ease;
+  }
+  .filter-pill:hover { border-color: var(--ink); color: var(--ink); }
+  .filter-pill.active {
+    background: var(--ink); color: var(--paper); border-color: var(--ink);
+  }
 
   /* Empty state */
   .empty {
@@ -153,7 +156,6 @@
   .card-list .name { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 600; margin-top: 10px; padding-right: 52px; overflow-wrap: break-word; }
   .card-list .desc { color: var(--ink-soft); font-size: 13px; margin-top: 6px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
-  /* Boutons d'action accessibles (zone tactile >= 32px) */
   .icon-btn {
     background: var(--paper); border: 1px solid transparent; border-radius: 8px;
     cursor: pointer; font-size: 14px; width: 32px; height: 32px;
@@ -173,33 +175,46 @@
     box-shadow: var(--shadow-sm);
     transition: opacity 0.2s ease, transform 0.18s ease;
   }
-  .card-item.reserved { opacity: 0.72; background: #FAF9F6; }
+  .card-item.reserved { background: #FAF9F6; }
   .card-item .photo {
     width: 100%; aspect-ratio: 4/3; background: var(--paper-alt);
     display: flex; align-items: center; justify-content: center; font-size: 32px;
     position: relative; overflow: hidden;
   }
   .card-item .photo img {
+    position: absolute; inset: 0;
     width: 100%; height: 100%; object-fit: cover; display: block;
   }
   .badge-status {
-    position: absolute; top: 10px; left: 10px;
+    position: absolute; top: 10px; left: 10px; z-index: 2;
     font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 999px;
-    background: var(--sage-soft); color: var(--sage);
+    background: var(--sage); color: white;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
   }
   .badge-priority {
-    position: absolute; top: 10px; right: 10px;
+    position: absolute; top: 10px; right: 10px; z-index: 2;
     font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 999px;
     background: var(--gold-soft); color: #7C550E;
   }
 
   .card-item .body { padding: 16px; display: flex; flex-direction: column; flex: 1; }
+  .item-cat {
+    display: inline-block; align-self: flex-start;
+    font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+    color: var(--ink-soft); background: var(--paper);
+    padding: 3px 9px; border-radius: 999px; margin-bottom: 8px;
+  }
   .card-item .title-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
   .card-item .title { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 600; line-height: 1.3; overflow-wrap: break-word; }
-  .card-item.reserved .title { text-decoration: line-through; color: var(--ink-soft); }
+  .card-item.reserved .title { color: var(--ink-soft); }
   .card-item .actions { display: flex; gap: 4px; flex-shrink: 0; }
   .card-item .price { font-family: 'IBM Plex Mono', monospace; color: var(--gold); font-size: 14px; margin-top: 6px; font-weight: 500; }
   .card-item .note { color: var(--ink-soft); font-size: 13px; margin-top: 8px; }
+  .reserved-info {
+    margin-top: 10px; font-size: 12px; font-weight: 600;
+    color: var(--sage); background: var(--sage-soft);
+    padding: 6px 10px; border-radius: 8px;
+  }
 
   .card-footer {
     margin-top: auto; padding-top: 14px;
@@ -274,10 +289,6 @@
 </header>
 
 <main>
-  <div class="alert-config" id="configAlert">
-    ⚠️ <strong>Configuration Firebase manquante :</strong> colle ton objet <code>firebaseConfig</code> dans le script en bas du fichier pour enregistrer tes listes en ligne.
-  </div>
-
   <!-- VUE 1 : LISTES -->
   <section id="viewLists">
     <div class="row-between">
@@ -299,6 +310,7 @@
       </div>
       <button class="btn-primary" id="btnNewItem">+ Ajouter un cadeau</button>
     </div>
+    <div class="filters-bar" id="categoryFilters" style="display:none;"></div>
     <div id="itemsContainer"></div>
   </section>
 </main>
@@ -309,7 +321,7 @@
     <h2 id="modalListTitle">Nouvelle liste</h2>
     <input type="hidden" id="listId" />
     <div class="field">
-      <label for="listOccasion">Occasion / Catégorie</label>
+      <label for="listOccasion">Occasion / Thème</label>
       <input id="listOccasion" placeholder="Ex. Noël 2026, Anniversaire, Naissance..." />
     </div>
     <div class="field">
@@ -346,8 +358,13 @@
       <input id="itemTitle" required placeholder="Ex. Cafetière italienne Bialetti" />
     </div>
     <div class="field">
+      <label for="itemCategory">Catégorie</label>
+      <input id="itemCategory" list="categoryList" placeholder="Ex. Jouets, Vêtements, Livres, Déco..." />
+      <datalist id="categoryList"></datalist>
+    </div>
+    <div class="field">
       <label for="itemPrice">Prix estimé (€)</label>
-      <input id="itemPrice" type="number" step="0.01" min="0" placeholder="Ex. 39.90" />
+      <input id="itemPrice" type="text" inputmode="decimal" placeholder="Ex. 39,90" />
     </div>
     <div class="field">
       <label for="itemUrl">Lien boutique (optionnel)</label>
@@ -365,7 +382,7 @@
       </select>
     </div>
     <div class="field">
-      <label for="itemNote">Précisions (taille, coloris...)</label>
+      <label for="itemNote">Précisions (taille, coloris, description...)</label>
       <textarea id="itemNote" rows="2"></textarea>
     </div>
     <div class="modal-actions">
@@ -375,10 +392,25 @@
   </form>
 </dialog>
 
+<!-- MODALE RÉSERVATION -->
+<dialog id="modalReserve">
+  <form id="formReserve">
+    <h2>Offrir ce cadeau</h2>
+    <input type="hidden" id="reserveItemId" />
+    <div class="field">
+      <label for="reserveByName">Qui réserve ce cadeau ? *</label>
+      <input id="reserveByName" required placeholder="Ex. Mamie, Julie, Tonton Marc..." />
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn-secondary" onclick="document.getElementById('modalReserve').close()">Annuler</button>
+      <button type="submit" class="btn-primary">Confirmer la réservation</button>
+    </div>
+  </form>
+</dialog>
+
 <div class="toast" id="toast"></div>
 
 <script>
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
   const firebaseConfig = {
     apiKey: "AIzaSyB6rvuMuhHfBFnmvOipW-3zPQ-rLXKdj3I",
     authDomain: "liste-cadeaux-ad6b5.firebaseapp.com",
@@ -389,18 +421,15 @@
     measurementId: "G-7DD51MSX4K"
   };
 
-  let db = null;
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
   let currentList = null;
   let unsubscribeLists = null;
   let unsubscribeItems = null;
-
-  const isConfigured = firebaseConfig.apiKey && firebaseConfig.apiKey !== "COLLER_ICI";
-  if (!isConfigured) {
-    document.getElementById("configAlert").style.display = "block";
-  } else {
-    firebase.initializeApp(firebaseConfig);
-    db = firebase.firestore();
-  }
+  let cachedLists = [];
+  let cachedItems = [];
+  let selectedCategory = "ALL";
 
   function showToast(msg) {
     const el = document.getElementById("toast");
@@ -416,9 +445,56 @@
     }[m]));
   }
 
+  // ===========================================================================
+  // LECTURE COMPATIBLE AVEC TOUS TES ANCIENS CHAMPS FIRESTORE
+  // ===========================================================================
+  function getItemPhoto(it) {
+    return it.photo || it.image || it.photoUrl || it.imageUrl || it.img || "";
+  }
+
+  function getItemCategory(it) {
+    return (it.category || it.categorie || it.cat || "").trim();
+  }
+
+  function getItemNote(it) {
+    return it.note || it.notes || it.description || it.desc || it.details || "";
+  }
+
+  function getItemUrl(it) {
+    return it.url || it.link || it.lien || "";
+  }
+
+  function getItemReservedBy(it) {
+    if (typeof it.reserved === "string" && it.reserved.trim()) return it.reserved.trim();
+    return (it.reservedBy || it.reservePar || it.buyer || it.offeredBy || it.takenBy || it.qui || "").trim();
+  }
+
+  function isItemReserved(it) {
+    return Boolean(getItemReservedBy(it)) || it.reserved === true;
+  }
+
+  function parseNumericPrice(raw) {
+    if (raw === null || raw === undefined || raw === "") return null;
+    if (typeof raw === "number") return isNaN(raw) ? null : raw;
+    const cleaned = String(raw)
+      .replace(/\s/g, "")
+      .replace(",", ".")
+      .replace(/[^0-9.]/g, "");
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? null : num;
+  }
+
+  function formatItemPrice(raw) {
+    if (raw === null || raw === undefined || raw === "") return "";
+    const num = parseNumericPrice(raw);
+    if (num !== null) return `${num.toFixed(2).replace(".", ",")} €`;
+    return String(raw);
+  }
+
   // Navigation
   function showListsView() {
     currentList = null;
+    selectedCategory = "ALL";
     if (unsubscribeItems) { unsubscribeItems(); unsubscribeItems = null; }
     history.replaceState(null, "", location.pathname);
     document.getElementById("headerTitle").textContent = "Mes listes cadeaux";
@@ -431,9 +507,10 @@
 
   function openList(list) {
     currentList = list;
+    selectedCategory = "ALL";
     history.replaceState(null, "", `?list=${encodeURIComponent(list.id)}`);
     document.getElementById("headerTitle").textContent = list.name;
-    document.getElementById("headerSub").textContent = list.occasion || "Liste de souhaits";
+    document.getElementById("headerSub").textContent = list.occasion || list.category || "Liste de souhaits";
     document.getElementById("btnBack").style.display = "inline-block";
     document.getElementById("btnShare").style.display = "inline-block";
     document.getElementById("viewLists").style.display = "none";
@@ -469,20 +546,24 @@
       return;
     }
 
-    container.innerHTML = `<div class="grid">${lists.map(l => `
-      <article class="card-list" data-id="${escapeHtml(l.id)}">
-        <div class="actions-list">
-          <button class="icon-btn" title="Modifier" onclick="event.stopPropagation(); editList('${escapeHtml(l.id)}')">✏️</button>
-          <button class="icon-btn del" title="Supprimer" onclick="event.stopPropagation(); deleteList('${escapeHtml(l.id)}')">🗑️</button>
-        </div>
-        <div class="eyebrow">
-          <span class="swatch" style="background:${escapeHtml(l.color || '#C08A22')}"></span>
-          ${escapeHtml(l.occasion || "Liste")}
-        </div>
-        <div class="name">${escapeHtml(l.name)}</div>
-        ${l.desc ? `<div class="desc">${escapeHtml(l.desc)}</div>` : ""}
-      </article>
-    `).join("")}</div>`;
+    container.innerHTML = `<div class="grid">${lists.map(l => {
+      const desc = l.desc || l.description || "";
+      const occasion = l.occasion || l.category || l.categorie || "Liste";
+      return `
+        <article class="card-list" data-id="${escapeHtml(l.id)}">
+          <div class="actions-list">
+            <button class="icon-btn" title="Modifier" onclick="event.stopPropagation(); editList('${escapeHtml(l.id)}')">✏️</button>
+            <button class="icon-btn del" title="Supprimer" onclick="event.stopPropagation(); deleteList('${escapeHtml(l.id)}')">🗑️</button>
+          </div>
+          <div class="eyebrow">
+            <span class="swatch" style="background:${escapeHtml(l.color || '#C08A22')}"></span>
+            ${escapeHtml(occasion)}
+          </div>
+          <div class="name">${escapeHtml(l.name)}</div>
+          ${desc ? `<div class="desc">${escapeHtml(desc)}</div>` : ""}
+        </article>
+      `;
+    }).join("")}</div>`;
 
     container.querySelectorAll(".card-list").forEach(card => {
       card.onclick = () => {
@@ -492,76 +573,128 @@
     });
   }
 
+  // Rendu des filtres par catégorie
+  function renderCategoryFilters(items) {
+    const bar = document.getElementById("categoryFilters");
+    const datalist = document.getElementById("categoryList");
+    const categories = [...new Set(items.map(getItemCategory).filter(Boolean))].sort();
+
+    datalist.innerHTML = categories.map(c => `<option value="${escapeHtml(c)}">`).join("");
+
+    if (!categories.length) {
+      bar.style.display = "none";
+      return;
+    }
+
+    if (selectedCategory !== "ALL" && !categories.includes(selectedCategory)) {
+      selectedCategory = "ALL";
+    }
+
+    bar.style.display = "flex";
+    bar.innerHTML = [
+      `<button class="filter-pill ${selectedCategory === "ALL" ? "active" : ""}" data-cat="ALL">Toutes (${items.length})</button>`,
+      ...categories.map(cat => {
+        const count = items.filter(it => getItemCategory(it) === cat).length;
+        return `<button class="filter-pill ${selectedCategory === cat ? "active" : ""}" data-cat="${escapeHtml(cat)}">${escapeHtml(cat)} (${count})</button>`;
+      })
+    ].join("");
+
+    bar.querySelectorAll(".filter-pill").forEach(btn => {
+      btn.onclick = () => {
+        selectedCategory = btn.dataset.cat;
+        renderItems(cachedItems);
+      };
+    });
+  }
+
   // Rendu des cadeaux
   function renderItems(items) {
+    renderCategoryFilters(items);
+
+    const filtered = selectedCategory === "ALL"
+      ? items
+      : items.filter(it => getItemCategory(it) === selectedCategory);
+
     const container = document.getElementById("itemsContainer");
-    const total = items.reduce((sum, it) => sum + (Number(it.price) || 0), 0);
-    const reservedCount = items.filter(it => it.reserved).length;
+    const total = filtered.reduce((sum, it) => sum + (parseNumericPrice(it.price) || 0), 0);
+    const reservedCount = filtered.filter(isItemReserved).length;
 
     document.getElementById("itemsCount").textContent =
-      `${items.length} idée${items.length > 1 ? "s" : ""}`;
+      `${filtered.length} idée${filtered.length > 1 ? "s" : ""}`;
     document.getElementById("itemsSummary").textContent =
-      items.length
-        ? `Total estimé : ${total.toFixed(2)} € • ${reservedCount} réservé${reservedCount > 1 ? "s" : ""}`
-        : (currentList?.desc || "Ajoute une première idée ci-contre");
+      filtered.length
+        ? `Total estimé : ${total.toFixed(2).replace(".", ",")} € • ${reservedCount} réservé${reservedCount > 1 ? "s" : ""}`
+        : (currentList?.desc || currentList?.description || "Ajoute une première idée ci-contre");
 
-    if (!items.length) {
+    if (!filtered.length) {
       container.innerHTML = `
         <div class="empty">
           <div class="empty-icon">🎀</div>
-          <div class="display">Cette liste est encore vide</div>
-          <p>Ajoute des idées avec leur prix et un lien vers la boutique.</p>
+          <div class="display">Aucun cadeau dans cette vue</div>
+          <p>Ajoute des idées avec leur photo, prix, catégorie et lien boutique.</p>
           <button class="btn-primary" onclick="openItemModal()">+ Ajouter un cadeau</button>
         </div>`;
       return;
     }
 
     // Trier : disponibles d'abord, coups de cœur en haut
-    const sorted = [...items].sort((a, b) => {
-      if (Boolean(a.reserved) !== Boolean(b.reserved)) return a.reserved ? 1 : -1;
+    const sorted = [...filtered].sort((a, b) => {
+      const resA = isItemReserved(a);
+      const resB = isItemReserved(b);
+      if (resA !== resB) return resA ? 1 : -1;
       if ((a.priority === "high") !== (b.priority === "high")) return a.priority === "high" ? -1 : 1;
       return 0;
     });
 
-    container.innerHTML = `<div class="grid">${sorted.map(it => `
-      <article class="card-item ${it.reserved ? "reserved" : ""}">
-        <div class="photo">
-          ${it.image ? `<img src="${escapeHtml(it.image)}" alt="${escapeHtml(it.title)}" loading="lazy" onerror="this.remove()">` : "🎁"}
-          ${it.reserved ? `<span class="badge-status">✓ Réservé</span>` : ""}
-          ${!it.reserved && it.priority === "high" ? `<span class="badge-priority">⭐ Coup de cœur</span>` : ""}
-        </div>
-        <div class="body">
-          <div class="title-row">
-            <div class="title">${escapeHtml(it.title)}</div>
-            <div class="actions">
-              <button class="icon-btn" title="Modifier" onclick="editItem('${escapeHtml(it.id)}')">✏️</button>
-              <button class="icon-btn del" title="Supprimer" onclick="deleteItem('${escapeHtml(it.id)}')">🗑️</button>
+    container.innerHTML = `<div class="grid">${sorted.map(it => {
+      const photo = getItemPhoto(it);
+      const category = getItemCategory(it);
+      const priceText = formatItemPrice(it.price);
+      const note = getItemNote(it);
+      const url = getItemUrl(it);
+      const reserved = isItemReserved(it);
+      const reservedBy = getItemReservedBy(it);
+
+      return `
+        <article class="card-item ${reserved ? "reserved" : ""}">
+          <div class="photo">
+            <span>🎁</span>
+            ${photo ? `<img src="${escapeHtml(photo)}" alt="${escapeHtml(it.title)}" loading="lazy" onerror="this.remove()">` : ""}
+            ${reserved ? `<span class="badge-status">✓ Réservé${reservedBy ? ` par ${escapeHtml(reservedBy)}` : ""}</span>` : ""}
+            ${!reserved && it.priority === "high" ? `<span class="badge-priority">⭐ Coup de cœur</span>` : ""}
+          </div>
+          <div class="body">
+            ${category ? `<span class="item-cat">${escapeHtml(category)}</span>` : ""}
+            <div class="title-row">
+              <div class="title">${escapeHtml(it.title)}</div>
+              <div class="actions">
+                <button class="icon-btn" title="Modifier" onclick="editItem('${escapeHtml(it.id)}')">✏️</button>
+                <button class="icon-btn del" title="Supprimer" onclick="deleteItem('${escapeHtml(it.id)}')">🗑️</button>
+              </div>
+            </div>
+            ${priceText ? `<div class="price">${escapeHtml(priceText)}</div>` : ""}
+            ${note ? `<div class="note">${escapeHtml(note)}</div>` : ""}
+            ${reserved ? `<div class="reserved-info">🎁 Offert par : ${escapeHtml(reservedBy || "Un proche")}</div>` : ""}
+            <div class="card-footer">
+              ${url ? `<a class="link-btn" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">Voir ↗</a>` : ""}
+              <button class="reserve-btn ${reserved ? "is-reserved" : ""}" onclick="handleReserveClick('${escapeHtml(it.id)}')">
+                ${reserved ? "Annuler" : "Je l'offre"}
+              </button>
             </div>
           </div>
-          ${it.price ? `<div class="price">${Number(it.price).toFixed(2)} €</div>` : ""}
-          ${it.note ? `<div class="note">${escapeHtml(it.note)}</div>` : ""}
-          <div class="card-footer">
-            ${it.url ? `<a class="link-btn" href="${escapeHtml(it.url)}" target="_blank" rel="noopener noreferrer">Voir ↗</a>` : ""}
-            <button class="reserve-btn ${it.reserved ? "is-reserved" : ""}" onclick="toggleReserve('${escapeHtml(it.id)}', ${Boolean(it.reserved)})">
-              ${it.reserved ? "Réservé" : "Je l'offre"}
-            </button>
-          </div>
-        </div>
-      </article>
-    `).join("")}</div>`;
+        </article>
+      `;
+    }).join("")}</div>`;
   }
 
-  // Firestore Listeners & CRUD
-  let cachedLists = [];
-  let cachedItems = [];
-
+  // Firestore Listeners
   function initRealtime() {
-    if (!db) return;
-    unsubscribeLists = db.collection("lists").orderBy("createdAt", "desc").onSnapshot(snap => {
-      cachedLists = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    unsubscribeLists = db.collection("lists").onSnapshot(snap => {
+      cachedLists = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
       renderLists(cachedLists);
 
-      // Ouverture directe via ?list=ID
       const paramId = new URLSearchParams(location.search).get("list");
       if (paramId && !currentList) {
         const target = cachedLists.find(l => l.id === paramId);
@@ -571,12 +704,12 @@
   }
 
   function listenItems(listId) {
-    if (!db) return;
     if (unsubscribeItems) unsubscribeItems();
     unsubscribeItems = db.collection("lists").doc(listId).collection("items")
-      .orderBy("createdAt", "desc")
       .onSnapshot(snap => {
-        cachedItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        cachedItems = snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
         renderItems(cachedItems);
       });
   }
@@ -585,9 +718,9 @@
   window.openListModal = (list = null) => {
     document.getElementById("modalListTitle").textContent = list ? "Modifier la liste" : "Nouvelle liste";
     document.getElementById("listId").value = list?.id || "";
-    document.getElementById("listOccasion").value = list?.occasion || "";
+    document.getElementById("listOccasion").value = list?.occasion || list?.category || "";
     document.getElementById("listName").value = list?.name || "";
-    document.getElementById("listDesc").value = list?.desc || "";
+    document.getElementById("listDesc").value = list?.desc || list?.description || "";
     document.getElementById("listColor").value = list?.color || "#C08A22";
     document.getElementById("modalList").showModal();
   };
@@ -598,7 +731,7 @@
   };
 
   window.deleteList = async (id) => {
-    if (!db || !confirm("Supprimer cette liste ?")) return;
+    if (!confirm("Supprimer cette liste ?")) return;
     await db.collection("lists").doc(id).delete();
     showToast("Liste supprimée");
   };
@@ -606,7 +739,6 @@
   document.getElementById("btnNewList").onclick = () => openListModal();
   document.getElementById("formList").onsubmit = async (e) => {
     e.preventDefault();
-    if (!db) return alert("Configure d'abord Firebase !");
     const id = document.getElementById("listId").value;
     const payload = {
       occasion: document.getElementById("listOccasion").value.trim(),
@@ -629,11 +761,12 @@
     document.getElementById("modalItemTitle").textContent = item ? "Modifier le cadeau" : "Nouveau cadeau";
     document.getElementById("itemId").value = item?.id || "";
     document.getElementById("itemTitle").value = item?.title || "";
-    document.getElementById("itemPrice").value = item?.price || "";
-    document.getElementById("itemUrl").value = item?.url || "";
-    document.getElementById("itemImage").value = item?.image || "";
+    document.getElementById("itemCategory").value = item ? getItemCategory(item) : "";
+    document.getElementById("itemPrice").value = item?.price ?? "";
+    document.getElementById("itemUrl").value = item ? getItemUrl(item) : "";
+    document.getElementById("itemImage").value = item ? getItemPhoto(item) : "";
     document.getElementById("itemPriority").value = item?.priority || "normal";
-    document.getElementById("itemNote").value = item?.note || "";
+    document.getElementById("itemNote").value = item ? getItemNote(item) : "";
     document.getElementById("modalItem").showModal();
   };
 
@@ -643,39 +776,85 @@
   };
 
   window.deleteItem = async (id) => {
-    if (!db || !currentList || !confirm("Supprimer ce cadeau ?")) return;
+    if (!currentList || !confirm("Supprimer ce cadeau ?")) return;
     await db.collection("lists").doc(currentList.id).collection("items").doc(id).delete();
     showToast("Cadeau supprimé");
   };
 
-  window.toggleReserve = async (id, currentStatus) => {
-    if (!db || !currentList) return;
+  // Gestion réservation nominative ("par qui")
+  window.handleReserveClick = async (id) => {
+    if (!currentList) return;
+    const it = cachedItems.find(x => x.id === id);
+    if (!it) return;
+
+    if (isItemReserved(it)) {
+      const who = getItemReservedBy(it);
+      if (!confirm(`Annuler la réservation${who ? ` de ${who}` : ""} ?`)) return;
+      await db.collection("lists").doc(currentList.id).collection("items").doc(id).update({
+        reserved: false,
+        reservedBy: "",
+        reservePar: "",
+        buyer: ""
+      });
+      showToast("Réservation annulée");
+    } else {
+      document.getElementById("reserveItemId").value = id;
+      document.getElementById("reserveByName").value = localStorage.getItem("gift_buyer_name") || "";
+      document.getElementById("modalReserve").showModal();
+    }
+  };
+
+  document.getElementById("formReserve").onsubmit = async (e) => {
+    e.preventDefault();
+    if (!currentList) return;
+    const id = document.getElementById("reserveItemId").value;
+    const name = document.getElementById("reserveByName").value.trim();
+    if (!name) return;
+
+    localStorage.setItem("gift_buyer_name", name);
     await db.collection("lists").doc(currentList.id).collection("items").doc(id).update({
-      reserved: !currentStatus
+      reserved: true,
+      reservedBy: name
     });
-    showToast(!currentStatus ? "Cadeau marqué comme réservé" : "Réservation annulée");
+    document.getElementById("modalReserve").close();
+    showToast(`Réservé par ${name} !`);
   };
 
   document.getElementById("btnNewItem").onclick = () => openItemModal();
   document.getElementById("formItem").onsubmit = async (e) => {
     e.preventDefault();
-    if (!db || !currentList) return;
+    if (!currentList) return;
     const id = document.getElementById("itemId").value;
-    const priceVal = document.getElementById("itemPrice").value;
+    const rawPrice = document.getElementById("itemPrice").value.trim();
+    const parsedPrice = parseNumericPrice(rawPrice);
+    const photoUrl = document.getElementById("itemImage").value.trim();
+    const cat = document.getElementById("itemCategory").value.trim();
+    const noteText = document.getElementById("itemNote").value.trim();
+
     const payload = {
       title: document.getElementById("itemTitle").value.trim(),
-      price: priceVal ? parseFloat(priceVal) : null,
+      category: cat,
+      categorie: cat,
+      price: parsedPrice !== null ? parsedPrice : rawPrice,
       url: document.getElementById("itemUrl").value.trim(),
-      image: document.getElementById("itemImage").value.trim(),
+      photo: photoUrl,
+      image: photoUrl,
       priority: document.getElementById("itemPriority").value,
-      note: document.getElementById("itemNote").value.trim()
+      note: noteText,
+      description: noteText
     };
+
     const col = db.collection("lists").doc(currentList.id).collection("items");
     if (id) {
       await col.doc(id).update(payload);
       showToast("Cadeau mis à jour");
     } else {
-      await col.add({ ...payload, reserved: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+      await col.add({
+        ...payload,
+        reserved: false,
+        reservedBy: "",
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
       showToast("Cadeau ajouté");
     }
     document.getElementById("modalItem").close();
