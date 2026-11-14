@@ -107,6 +107,7 @@
     transition: transform 0.15s ease, background 0.15s ease;
   }
   .btn-primary:hover { background: var(--ink-soft); transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: 0.6; cursor: wait; transform: none; }
 
   .btn-secondary {
     background: var(--paper-alt); color: var(--ink);
@@ -262,6 +263,16 @@
   .field input, .field textarea, .field select {
     width: 100%; padding: 10px 12px; border-radius: 10px;
     border: 1px solid var(--line); background: white; font-size: 14px; color: var(--ink);
+  }
+  .modal-error {
+    display: none;
+    background: var(--berry-soft);
+    color: var(--berry);
+    border: 1px solid var(--berry);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin-bottom: 12px;
   }
   .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
 
@@ -453,6 +464,7 @@
       <label for="reserveByName">Qui réserve ce cadeau ? *</label>
       <input id="reserveByName" required placeholder="Ex. Marraine, Tata Élise, Mamie..." />
     </div>
+    <div class="modal-error" id="reserveError"></div>
     <div class="modal-actions">
       <button type="button" class="btn-secondary" onclick="document.getElementById('modalReserve').close()">Annuler</button>
       <button type="submit" class="btn-primary">Confirmer la réservation</button>
@@ -497,6 +509,13 @@
   let cachedItems = [];
   let selectedCategory = "ALL";
   let transferItemId = null;
+
+  function safeGetStorage(key) {
+    try { return localStorage.getItem(key) || ""; } catch (e) { return ""; }
+  }
+  function safeSetStorage(key, val) {
+    try { localStorage.setItem(key, val); } catch (e) {}
+  }
 
   // Authentification Éditeur
   auth.onAuthStateChanged(user => {
@@ -856,8 +875,12 @@
   window.editList = (id) => { const l = cachedLists.find(x => x.id === id); if (l) openListModal(l); };
   window.deleteList = async (id) => {
     if (await customConfirm("Supprimer définitivement cette liste et tous ses cadeaux ?")) {
-      await db.collection("lists").doc(id).delete();
-      showToast("Liste supprimée");
+      try {
+        await db.collection("lists").doc(id).delete();
+        showToast("Liste supprimée");
+      } catch (err) {
+        showToast("Erreur lors de la suppression");
+      }
     }
   };
 
@@ -870,10 +893,14 @@
       desc: document.getElementById("listDesc").value.trim(),
       color: document.getElementById("listColor").value
     };
-    if (id) await db.collection("lists").doc(id).update(payload);
-    else await db.collection("lists").add({ ...payload, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-    document.getElementById("modalList").close();
-    showToast("Enregistré");
+    try {
+      if (id) await db.collection("lists").doc(id).update(payload);
+      else await db.collection("lists").add({ ...payload, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+      document.getElementById("modalList").close();
+      showToast("Enregistré");
+    } catch (err) {
+      showToast("Erreur lors de l'enregistrement");
+    }
   };
 
   // Gestion des images par Collage / Glisser-Déposer
@@ -962,8 +989,12 @@
 
   window.deleteItem = async (id) => {
     if (await customConfirm("Supprimer ce cadeau de la liste ?")) {
-      await db.collection("lists").doc(currentList.id).collection("items").doc(id).delete();
-      showToast("Cadeau supprimé");
+      try {
+        await db.collection("lists").doc(currentList.id).collection("items").doc(id).delete();
+        showToast("Cadeau supprimé");
+      } catch (err) {
+        showToast("Erreur lors de la suppression");
+      }
     }
   };
 
@@ -988,15 +1019,19 @@
     const item = cachedItems.find(x => x.id === transferItemId);
     if (!item || !targetListId) return;
 
-    const { id: _ignored, ...itemData } = item;
-    await db.collection("lists").doc(targetListId).collection("items").add({
-      ...itemData,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    await db.collection("lists").doc(currentList.id).collection("items").doc(transferItemId).delete();
+    try {
+      const { id: _ignored, ...itemData } = item;
+      await db.collection("lists").doc(targetListId).collection("items").add({
+        ...itemData,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      await db.collection("lists").doc(currentList.id).collection("items").doc(transferItemId).delete();
 
-    document.getElementById("modalTransfer").close();
-    showToast("Cadeau déplacé !");
+      document.getElementById("modalTransfer").close();
+      showToast("Cadeau déplacé !");
+    } catch (err) {
+      showToast("Erreur lors du déplacement");
+    }
   };
 
   // Réservation
@@ -1008,29 +1043,58 @@
     if (isItemReserved(it)) {
       const who = getItemReservedBy(it);
       if (await customConfirm(`Annuler la réservation${who ? ` de ${who}` : ""} ?`)) {
-        await db.collection("lists").doc(currentList.id).collection("items").doc(id).update({
-          reserved: false, reservedBy: "", reservePar: "", buyer: ""
-        });
-        showToast("Réservation annulée");
+        try {
+          await db.collection("lists").doc(currentList.id).collection("items").doc(id).update({
+            reserved: false, reservedBy: "", reservePar: "", buyer: ""
+          });
+          showToast("Réservation annulée");
+        } catch (err) {
+          showToast(err.code === "permission-denied"
+            ? "Action bloquée par les règles Firebase"
+            : "Erreur lors de l'annulation");
+        }
       }
     } else {
       document.getElementById("reserveItemId").value = id;
-      document.getElementById("reserveByName").value = localStorage.getItem("gift_buyer_name") || "";
+      document.getElementById("reserveByName").value = safeGetStorage("gift_buyer_name");
+      const errBox = document.getElementById("reserveError");
+      errBox.style.display = "none";
       document.getElementById("modalReserve").showModal();
+      document.getElementById("reserveByName").focus();
     }
   };
 
   document.getElementById("formReserve").onsubmit = async (e) => {
     e.preventDefault();
+    if (!currentList) return;
     const id = document.getElementById("reserveItemId").value;
     const name = document.getElementById("reserveByName").value.trim();
-    if (!name) return;
-    localStorage.setItem("gift_buyer_name", name);
-    await db.collection("lists").doc(currentList.id).collection("items").doc(id).update({
-      reserved: true, reservedBy: name
-    });
-    document.getElementById("modalReserve").close();
-    showToast(`Réservé par ${name} !`);
+    if (!id || !name) return;
+
+    const btn = e.target.querySelector('button[type="submit"]');
+    const errBox = document.getElementById("reserveError");
+    errBox.style.display = "none";
+    btn.disabled = true;
+    btn.textContent = "Enregistrement...";
+
+    try {
+      safeSetStorage("gift_buyer_name", name);
+      await db.collection("lists").doc(currentList.id).collection("items").doc(id).update({
+        reserved: true,
+        reservedBy: name
+      });
+      document.getElementById("modalReserve").close();
+      showToast(`Réservé par ${name} !`);
+    } catch (err) {
+      console.error("Erreur réservation :", err);
+      errBox.textContent = err.code === "permission-denied"
+        ? "Firebase bloque la réservation pour les visiteurs non connectés. Mets à jour les règles Firestore (allow update: if true; sur items)."
+        : "Impossible d'enregistrer la réservation : " + (err.message || "erreur réseau");
+      errBox.style.display = "block";
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Confirmer la réservation";
+    }
   };
 
   document.getElementById("formItem").onsubmit = async (e) => {
@@ -1052,15 +1116,19 @@
       note: document.getElementById("itemNote").value.trim()
     };
 
-    const col = db.collection("lists").doc(currentList.id).collection("items");
-    if (id) {
-      await col.doc(id).update(payload);
-      showToast("Cadeau mis à jour");
-    } else {
-      await col.add({ ...payload, reserved: false, reservedBy: "", createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-      showToast("Cadeau ajouté");
+    try {
+      const col = db.collection("lists").doc(currentList.id).collection("items");
+      if (id) {
+        await col.doc(id).update(payload);
+        showToast("Cadeau mis à jour");
+      } else {
+        await col.add({ ...payload, reserved: false, reservedBy: "", createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+        showToast("Cadeau ajouté");
+      }
+      document.getElementById("modalItem").close();
+    } catch (err) {
+      showToast("Erreur lors de l'enregistrement");
     }
-    document.getElementById("modalItem").close();
   };
 </script>
 </body>
