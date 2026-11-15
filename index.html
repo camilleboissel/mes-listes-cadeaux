@@ -134,9 +134,20 @@
     border: 1px solid var(--line); border-radius: 20px; padding: 20px;
     margin-bottom: 24px; background: rgba(255, 255, 255, 0.25);
   }
-  .category-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 16px; }
+  .category-header { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 16px; }
+  .category-header-left { display: flex; align-items: baseline; gap: 8px; }
   .category-title { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 600; color: var(--ink); margin: 0; }
   .category-count { font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: var(--ink-soft); }
+  
+  .sort-controls { display: flex; gap: 4px; }
+  .sort-btn {
+    background: transparent; border: 1px solid var(--line); border-radius: 6px;
+    width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 12px; color: var(--ink-soft);
+    transition: all 0.15s ease;
+  }
+  .sort-btn:hover { background: white; border-color: var(--ink); color: var(--ink); }
+  .sort-btn:disabled { opacity: 0.3; cursor: default; border-color: var(--line); }
 
   /* Empty state */
   .empty {
@@ -436,7 +447,7 @@
     </div>
     <div class="modal-actions">
       <button type="button" class="btn-secondary" onclick="document.getElementById('modalItem').close()">Annuler</button>
-      <button type="submit" class="btn-primary">Enregistrer</button>
+      <button type="submit" id="btnSaveItem" class="btn-primary">Enregistrer</button>
     </div>
   </form>
 </dialog>
@@ -749,8 +760,66 @@
     });
   }
 
+  // Ordre des cadeaux
+  window.moveItem = async (id, direction) => {
+    if (!currentList) return;
+    const it = cachedItems.find(x => x.id === id);
+    if (!it) return;
+    
+    const cat = getItemCategory(it);
+    // On trie les items de cette catégorie par order (si existant) puis par date de création, puis on met les coups de coeurs en premier. 
+    // Cependant l'ordre manuel (champ `order`) prime s'il a été défini, sinon les coups de coeur en haut.
+    let catItems = cachedItems.filter(x => getItemCategory(x).toLowerCase() === cat.toLowerCase());
+    
+    // Tri initial : Coup de coeur d'abord, puis ordre (si défini, sinon 0), puis date de création (les plus récents en premier par défaut)
+    catItems.sort((a, b) => {
+        if (a.order !== undefined && b.order !== undefined) return a.order - b.order;
+        if (a.order !== undefined) return -1;
+        if (b.order !== undefined) return 1;
+        
+        const prioA = a.priority === "high" ? 1 : 0;
+        const prioB = b.priority === "high" ? 1 : 0;
+        if (prioA !== prioB) return prioB - prioA;
+        
+        return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
+    });
+
+    const index = catItems.findIndex(x => x.id === id);
+    if (index === -1) return;
+    if (direction === 'up' && index === 0) return;
+    if (direction === 'down' && index === catItems.length - 1) return;
+
+    // Assigner un order à tous s'ils n'en ont pas
+    let hasUpdates = false;
+    catItems.forEach((item, idx) => {
+        if(item.order === undefined || item.order !== idx * 10) {
+            item.order = idx * 10;
+            hasUpdates = true;
+        }
+    });
+
+    // Swap des ordres
+    const targetIdx = direction === 'up' ? index - 1 : index + 1;
+    const temp = catItems[index].order;
+    catItems[index].order = catItems[targetIdx].order;
+    catItems[targetIdx].order = temp;
+
+    // Mise à jour base de données en batch
+    const batch = db.batch();
+    catItems.forEach(item => {
+      batch.update(db.collection("lists").doc(currentList.id).collection("items").doc(item.id), { order: item.order });
+    });
+    
+    try {
+        await batch.commit();
+    } catch (e) {
+        showToast("Erreur lors de la réorganisation");
+    }
+  };
+
+
   // Rendu Carte Cadeau
-  function renderItemCard(it) {
+  function renderItemCard(it, index, totalInCategory) {
     const photo = getItemPhoto(it);
     const priceText = formatItemPrice(it.price);
     const note = getItemNote(it);
@@ -817,17 +886,37 @@
     });
 
     const groups = [...groupsMap.values()].sort((a, b) => a.label === "Autres idées" ? 1 : b.label === "Autres idées" ? -1 : a.label.localeCompare(b.label, "fr"));
+    
+    // Tri à l'intérieur de chaque groupe
+    groups.forEach(group => {
+       group.items.sort((a, b) => {
+            // L'ordre manuel prime
+            if (a.order !== undefined && b.order !== undefined) return a.order - b.order;
+            if (a.order !== undefined) return -1;
+            if (b.order !== undefined) return 1;
+            
+            // Sinon les coups de coeurs en premier
+            const prioA = a.priority === "high" ? 1 : 0;
+            const prioB = b.priority === "high" ? 1 : 0;
+            if (prioA !== prioB) return prioB - prioA;
+            
+            // Sinon les plus récents
+            return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
+       });
+    });
 
     if (groups.length <= 1 && groups[0].label === "Autres idées") {
-      container.innerHTML = `<div class="grid">${groups[0].items.map(renderItemCard).join("")}</div>`;
+      container.innerHTML = `<div class="grid">${groups[0].items.map((it, idx) => renderItemCard(it, idx, groups[0].items.length)).join("")}</div>`;
     } else {
       container.innerHTML = groups.map(group => `
         <section class="category-section">
           <div class="category-header">
-            <h2 class="category-title">${escapeHtml(group.label)}</h2>
-            <span class="category-count">${group.items.length}</span>
+            <div class="category-header-left">
+                <h2 class="category-title">${escapeHtml(group.label)}</h2>
+                <span class="category-count">${group.items.length}</span>
+            </div>
           </div>
-          <div class="grid">${group.items.map(renderItemCard).join("")}</div>
+          <div class="grid">${group.items.map((it, idx) => renderItemCard(it, idx, group.items.length)).join("")}</div>
         </section>
       `).join("");
     }
@@ -1130,8 +1219,11 @@
   document.getElementById("formReserve").onsubmit = submitReservation;
   document.getElementById("btnConfirmReserve").onclick = submitReservation;
 
-  document.getElementById("formItem").onsubmit = async (e) => {
-    e.preventDefault();
+  async function submitItemForm(e) {
+    if (e) e.preventDefault();
+    const btn = document.getElementById("btnSaveItem");
+    if (btn.disabled) return;
+    
     const id = document.getElementById("itemId").value;
     const rawPrice = document.getElementById("itemPrice").value.trim();
     const parsedPrice = parseNumericPrice(rawPrice);
@@ -1139,6 +1231,8 @@
     const url = document.getElementById("itemImageUrl").value.trim();
     const finalPhoto = b64 || url;
 
+    // Protection contre l'écrasement de la catégorie. Si on modifie un champ existant, on doit s'assurer
+    // qu'on ne passe pas l'identifiant interne Firestore à la place du vrai texte si un bug survenait.
     const payload = {
       title: document.getElementById("itemTitle").value.trim(),
       category: document.getElementById("itemCategory").value.trim(),
@@ -1148,6 +1242,18 @@
       priority: document.getElementById("itemPriority").value,
       note: document.getElementById("itemNote").value.trim()
     };
+    
+    // Force la réinitialisation de l'ordre si la catégorie a changé ou si le statut "Coup de coeur" a changé,
+    // pour forcer le tri naturel de la nouvelle catégorie. On supprime l'order existant si présent.
+    if (id) {
+        const existingItem = cachedItems.find(x => x.id === id);
+        if (existingItem && (existingItem.category !== payload.category || existingItem.priority !== payload.priority)) {
+            payload.order = firebase.firestore.FieldValue.delete();
+        }
+    }
+
+    btn.disabled = true;
+    btn.textContent = "Enregistrement...";
 
     try {
       const col = db.collection("lists").doc(currentList.id).collection("items");
@@ -1160,9 +1266,16 @@
       }
       document.getElementById("modalItem").close();
     } catch (err) {
+      console.error(err);
       showToast("Erreur lors de l'enregistrement");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Enregistrer";
     }
-  };
+  }
+
+  document.getElementById("formItem").onsubmit = submitItemForm;
+  document.getElementById("btnSaveItem").onclick = submitItemForm;
 </script>
 </body>
 </html>
